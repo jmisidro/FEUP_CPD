@@ -71,10 +71,38 @@ void OnMult(int matrixSize)
 }
 
 // add code here for line x line matriz multiplication
-void OnMultLine(int matrixSize)
-{
-    
-    
+void OnMultLine(int matrixSize) {
+
+    SYSTEMTIME Time1, Time2;
+
+    char st[100];
+    int i, j, k;
+
+    double *pha, *phb, *phc;
+
+    // Setup Matrixes
+    setupMatrixes(&pha, &phb, &phc, matrixSize);
+
+    Time1 = clock();
+
+    for (i = 0; i < matrixSize; ++i)
+        for (k = 0; k < matrixSize; ++k)
+            for (j = 0; j < matrixSize; ++j)
+                phc[i * matrixSize + j] += pha[i * matrixSize + k] * phb[k * matrixSize + j];
+
+    Time2 = clock();
+    sprintf(st, "Time: %3.3f seconds\n", (double)(Time2 - Time1) / CLOCKS_PER_SEC);
+    cout << st;
+
+    // display 10 elements of the result matrix to verify correctness
+    cout << "Result matrix: " << endl;
+    for (i = 0; i < 1; ++i)
+        for (j = 0; j < min(10, matrixSize); ++j)
+            cout << phc[j] << " ";
+    cout << endl;
+
+    // Free memory used by Matrixes
+    deleteMatrixes(pha, phb, phc);
 }
 
 // add code here for block x block matriz multiplication
@@ -86,13 +114,51 @@ void OnMultBlock(int matrixSize, int blockSize)
 // function to run stats for the 3 types of multiplication
 void runStats(int &EventSet, int &ret, long long values[]) {
 
-    /* Regular Multiplication */
+    printf("------Regular Multiplication------\n\n");
+
 	for (size_t n = 600; n <= 3000; n+=400) {	
 		printf("n=%zu\n", n);
 		// Start PAPI
         ret = PAPI_start(EventSet);
 		if (ret != PAPI_OK) cout << "ERROR: Start PAPI" << endl;
 		OnMult(n);  
+  		ret = PAPI_stop(EventSet, values);
+  		if (ret != PAPI_OK) cout << "ERROR: Stop PAPI" << endl;
+  		printf("L1 DCM: %lld \n",values[0]);
+  		printf("L2 DCM: %lld \n",values[1]);
+		printf("----\n");
+
+		ret = PAPI_reset( EventSet );
+		if ( ret != PAPI_OK )
+			std::cout << "FAIL reset" << endl; 
+	}
+
+    printf("------Line Multiplication------\n\n");
+
+	for (size_t n = 600; n <= 3000; n+=400) {	
+		printf("n=%zu\n", n);
+		// Start PAPI
+		ret = PAPI_start(EventSet);
+		if (ret != PAPI_OK) cout << "ERROR: Start PAPI" << endl;
+		OnMultLine(n);  
+  		ret = PAPI_stop(EventSet, values);
+  		if (ret != PAPI_OK) cout << "ERROR: Stop PAPI" << endl;
+  		printf("L1 DCM: %lld \n",values[0]);
+  		printf("L2 DCM: %lld \n",values[1]);
+		printf("----\n");
+
+		ret = PAPI_reset( EventSet );
+		if ( ret != PAPI_OK )
+			std::cout << "FAIL reset" << endl; 
+
+	}
+
+	for (size_t n = 4096; n <= 10240; n+=2048)  {	
+		printf("n=%zu\n", n);
+		// Start PAPI
+		ret = PAPI_start(EventSet);
+		if (ret != PAPI_OK) cout << "ERROR: Start PAPI" << endl;
+		OnMultLine(n);  
   		ret = PAPI_stop(EventSet, values);
   		if (ret != PAPI_OK) cout << "ERROR: Stop PAPI" << endl;
   		printf("L1 DCM: %lld \n",values[0]);

@@ -155,6 +155,7 @@ void OnMultBlock(int matrixSize, int blockSize)
 
 // function to run stats for the 3 types of multiplication
 void runStats(int &EventSet, int &ret, long long values[]) {
+    /*
 
     printf("------Regular Multiplication------\n\n");
 
@@ -211,11 +212,11 @@ void runStats(int &EventSet, int &ret, long long values[]) {
 		if ( ret != PAPI_OK )
 			std::cout << "FAIL reset" << endl; 
 	}
-
+    */
     printf("------Block Multiplication------\n\n");
 
 	for (size_t n = 4096; n <= 10240; n+=2048) {	
-        for (size_t blockSize = 128; blockSize <= 512; blockSize*=2) {
+        for (size_t blockSize = 32; blockSize <= 1024; blockSize*=2) {
             printf("n=%zu\n", n);
             printf("blockSize=%zu\n", blockSize);
             // Start PAPI

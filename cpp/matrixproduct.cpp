@@ -216,7 +216,7 @@ void runStats(int &EventSet, int &ret, long long values[]) {
     printf("------Block Multiplication------\n\n");
 
 	for (size_t n = 4096; n <= 10240; n+=2048) {	
-        for (size_t blockSize = 32; blockSize <= 1024; blockSize*=2) {
+        for (size_t blockSize = 32; blockSize <= 2048; blockSize*=2) {
             printf("n=%zu\n", n);
             printf("blockSize=%zu\n", blockSize);
             // Start PAPI

@@ -111,7 +111,7 @@ void OnMultBlock(int matrixSize, int blockSize)
     SYSTEMTIME Time1, Time2;
 
     char st[100];
-    int i, j, k;
+    int i, j, k, ii, jj, kk;
 
     double *pha, *phb, *phc;
 
@@ -121,50 +121,20 @@ void OnMultBlock(int matrixSize, int blockSize)
     Time1 = clock();
 
     //code for block x block matrix multiplication
-    int blocks_per_side = matrixSize / blockSize;
-
-    double *block_a, *block_b;
-
-    block_a = new double[blockSize * blockSize];
-    block_b = new double[blockSize * blockSize];
-
-    // initialize blocks
-    for (i = 0; i < blockSize * blockSize; ++i)
-        block_a[i] = block_b[i] = 0;
-
-
-    // main loop
-    for (b_line = 0; b_line < blocks_per_side; b_line++)
-    {
-        for (b_col = 0; b_col < blocks_per_side; b_col++)
-        {
-            // populate blocks
-            for (i = 0; i < blockSize; i++)
-            {
-                for (j = 0; j < blockSize; j++)
-                {
-                    block_a[i * blockSize + j] = pha[(b_line * blockSize + i) * matrixSize + (b_col * blockSize + j)];
-                    block_b[i * blockSize + j] = phb[(b_line * blockSize + i) * matrixSize + (b_col * blockSize + j)];
-                }
-            }
-
-            // multiply blocks
-            for (i = 0; i < blockSize; i++)
-            {
-                for (j = 0; j < blockSize; j++)
-                {
-                    for (k = 0; k < blockSize; k++)
-                    {
-                        phc[(b_line * blockSize + i) * matrixSize + (b_col * blockSize + j)] += block_a[i * blockSize + k] * block_b[k * blockSize + j];
+    for(ii=0; ii<matrixSize; ii+=blockSize) {    
+        for( kk=0; kk<matrixSize; kk+=blockSize){ 
+            for( jj=0; jj<matrixSize; jj+=blockSize) {
+                for (i = ii ; i < ii + blockSize ; i++) {    
+                    for (k = kk ; k < kk + blockSize ; k++) {
+                        for (j = jj ; j < jj + blockSize ; j++) {
+                            phc[i*matrixSize+j] += pha[i*matrixSize+k] * phb[k*matrixSize+j];
+                        }
                     }
                 }
             }
         }
     }
     
-
-    delete[] block_a;
-    delete[] block_b;
 
     Time2 = clock();
     sprintf(st, "Time: %3.3f seconds\n", (double)(Time2 - Time1) / CLOCKS_PER_SEC);
@@ -180,13 +150,11 @@ void OnMultBlock(int matrixSize, int blockSize)
 
     // Free memory used by Matrixes
     deleteMatrixes(pha, phb, phc);
-    
-    
+
 }
+
 // function to run stats for the 3 types of multiplication
 void runStats(int &EventSet, int &ret, long long values[]) {
-
-    /*
 
     printf("------Regular Multiplication------\n\n");
 
@@ -265,23 +233,6 @@ void runStats(int &EventSet, int &ret, long long values[]) {
                 std::cout << "FAIL reset" << endl; 
         }
 	}
-    */
-
-    printf("n=%zu\n", 640);
-    printf("blockSize=%zu\n", 32);
-    // Start PAPI
-    ret = PAPI_start(EventSet);
-    if (ret != PAPI_OK) cout << "ERROR: Start PAPI" << endl;
-    OnMultBlock(640, 32);  
-    ret = PAPI_stop(EventSet, values);
-    if (ret != PAPI_OK) cout << "ERROR: Stop PAPI" << endl;
-    printf("L1 DCM: %lld \n",values[0]);
-    printf("L2 DCM: %lld \n",values[1]);
-    printf("----\n");
-
-    ret = PAPI_reset( EventSet );
-    if ( ret != PAPI_OK )
-        std::cout << "FAIL reset" << endl; 
 
 }
 

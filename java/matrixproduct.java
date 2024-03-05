@@ -9,14 +9,13 @@ public class matrixproduct{
             System.out.println();
             System.out.println("1. Multiplication");
             System.out.println("2. Line Multiplication");
-            System.out.println("3. Block Multiplication");
-            System.out.println("4. Run all stats");
+            System.out.println("3. Run all stats");
             System.out.printf("Selection?: ");
             op = sc.nextInt();
 
             if (op == 0 ) break;
 
-            if(op != 4){
+            if(op != 3){
             System.out.printf("Dimensions: lins=cols ? ");
             lin = sc.nextInt();
             col = lin;
@@ -30,8 +29,6 @@ public class matrixproduct{
 				    OnMultLine(lin, col);
                     break;
                 case 3:
-                    OnMultBlock(lin, col, blockSize);
-                case 4:
                     runStats();  
                 default:
                     break;
@@ -133,17 +130,23 @@ public class matrixproduct{
 		System.out.println();
     }
 
-    public static void OnMultBlock(int m_ar, int m_br, int blockSize){
-        System.out.println("todo");
-    }
 
     public static void runStats(){
-        System.out.println("------Line Multiplication------");
+        System.out.println("------Regular Multiplication------");
 
         for (int n = 600; n <= 3000; n+=400) {
             System.out.printf("n=%d\n", n);
             OnMult( n, n); 
             System.out.println("----\n");    
         }
+
+        System.out.println("------Line Multiplication------");
+
+        for (int n = 600; n <= 3000; n+=400) {
+            System.out.printf("n=%d\n", n);
+            OnMultLine( n, n); 
+            System.out.println("----\n");    
+        }
+
     }
 }   

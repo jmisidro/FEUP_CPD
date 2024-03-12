@@ -38,7 +38,7 @@ void deleteMatrixes(double *pha, double *phb, double *phc) {
 void OnMult(int matrixSize)
 {
 
-    SYSTEMTIME Time1, Time2;
+    //SYSTEMTIME Time1, Time2;
 
     char st[100];
     int i, j, k;
@@ -48,15 +48,15 @@ void OnMult(int matrixSize)
     // Setup Matrixes
     setupMatrixes(&pha, &phb, &phc, matrixSize);
 
-    Time1 = clock();
+    //Time1 = clock();
 
     for (i = 0; i < matrixSize; ++i)
         for (j = 0; j < matrixSize; ++j)
             for (k = 0; k < matrixSize; ++k)
                 phc[i * matrixSize + j] += pha[i * matrixSize + k] * phb[k * matrixSize + j];
 
-    Time2 = clock();
-    sprintf(st, "Time: %3.3f seconds\n", (double)(Time2 - Time1) / CLOCKS_PER_SEC);
+    //Time2 = clock();
+    sprintf(st, "Time: %3.3f seconds\n", (end - start) / CLOCKS_PER_SEC);
     cout << st;
 
     // display 10 elements of the result matrix to verify correctness
@@ -74,6 +74,7 @@ void OnMult(int matrixSize)
 void OnMultLine(int matrixSize) {
 
     SYSTEMTIME Time1, Time2;
+    double start,end;
 
     char st[100];
     int i, j, k;
@@ -83,15 +84,18 @@ void OnMultLine(int matrixSize) {
     // Setup Matrixes
     setupMatrixes(&pha, &phb, &phc, matrixSize);
 
-    Time1 = clock();
-
+    //Time1 = clock();
+    start = omp_get_wtime(); 
+    #pragma omp parallel for private(i,j,k)
     for (i = 0; i < matrixSize; ++i)
         for (k = 0; k < matrixSize; ++k)
             for (j = 0; j < matrixSize; ++j)
                 phc[i * matrixSize + j] += pha[i * matrixSize + k] * phb[k * matrixSize + j];
 
-    Time2 = clock();
-    sprintf(st, "Time: %3.3f seconds\n", (double)(Time2 - Time1) / CLOCKS_PER_SEC);
+    //Time2 = clock();
+    end = omp_get_wtime();
+
+    sprintf(st, "Time: %3.3f seconds\n", (end - start));
     cout << st;
 
     // display 10 elements of the result matrix to verify correctness
@@ -175,7 +179,7 @@ void runStats(int &EventSet, int &ret, long long values[]) {
 		if ( ret != PAPI_OK )
 			std::cout << "FAIL reset" << endl; 
 	}
-
+*/
     printf("------Line Multiplication------\n\n");
 
 	for (size_t n = 600; n <= 3000; n+=400) {	
@@ -212,7 +216,8 @@ void runStats(int &EventSet, int &ret, long long values[]) {
 		if ( ret != PAPI_OK )
 			std::cout << "FAIL reset" << endl; 
 	}
-    */
+    
+   /*
     printf("------Block Multiplication------\n\n");
 
 	for (size_t n = 4096; n <= 10240; n+=2048) {	
@@ -234,7 +239,7 @@ void runStats(int &EventSet, int &ret, long long values[]) {
                 std::cout << "FAIL reset" << endl; 
         }
 	}
-
+    */
 }
 
 void handle_error (int retval)

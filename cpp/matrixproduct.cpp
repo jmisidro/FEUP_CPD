@@ -4,6 +4,7 @@
 #include <time.h>
 #include <cstdlib>
 #include <papi.h>
+#include <omp.h>
 
 using namespace std;
 
@@ -38,7 +39,7 @@ void deleteMatrixes(double *pha, double *phb, double *phc) {
 void OnMult(int matrixSize)
 {
 
-    //SYSTEMTIME Time1, Time2;
+    SYSTEMTIME Time1, Time2;
 
     char st[100];
     int i, j, k;
@@ -48,15 +49,15 @@ void OnMult(int matrixSize)
     // Setup Matrixes
     setupMatrixes(&pha, &phb, &phc, matrixSize);
 
-    //Time1 = clock();
+    Time1 = clock();
 
     for (i = 0; i < matrixSize; ++i)
         for (j = 0; j < matrixSize; ++j)
             for (k = 0; k < matrixSize; ++k)
                 phc[i * matrixSize + j] += pha[i * matrixSize + k] * phb[k * matrixSize + j];
 
-    //Time2 = clock();
-    sprintf(st, "Time: %3.3f seconds\n", (end - start) / CLOCKS_PER_SEC);
+    Time2 = clock();
+    sprintf(st, "Time: %3.3f seconds\n", (Time1 - Time2) / CLOCKS_PER_SEC);
     cout << st;
 
     // display 10 elements of the result matrix to verify correctness
@@ -73,7 +74,7 @@ void OnMult(int matrixSize)
 // add code here for line x line matriz multiplication
 void OnMultLine(int matrixSize) {
 
-    SYSTEMTIME Time1, Time2;
+    //SYSTEMTIME Time1, Time2;
     double start,end;
 
     char st[100];
@@ -86,9 +87,10 @@ void OnMultLine(int matrixSize) {
 
     //Time1 = clock();
     start = omp_get_wtime(); 
-    #pragma omp parallel for private(i,j,k)
+    #pragma omp parallel private(i,k)
     for (i = 0; i < matrixSize; ++i)
         for (k = 0; k < matrixSize; ++k)
+            #pragma omp for private(j)
             for (j = 0; j < matrixSize; ++j)
                 phc[i * matrixSize + j] += pha[i * matrixSize + k] * phb[k * matrixSize + j];
 

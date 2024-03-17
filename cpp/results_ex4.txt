@@ -1,7 +1,5 @@
 ------Line Multiplication Pragma 1------
 
-------Line Multiplication------
-
 n=600
 Time: 0.014 seconds
 Result matrix: 

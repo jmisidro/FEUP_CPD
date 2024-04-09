@@ -1,0 +1,23 @@
+{
+    "database": [
+        {
+            "password":"$2a$12$oirt3S.RexrGmiCyczm.EeaFERI0nvwTi5ZenM.oTpRTmQouBvE8S",
+            "rank":0,
+            "username":"zeguedes",
+            "token":"$2a$10$71LPt0kNP8qV\/Fa9PAtLl.T1cl4F6AGSbOALhp62u4fTBR1R\/MgNm"
+        },
+        {
+            "password":"$2a$12$oirt3S.RexrGmiCyczm.EeaFERI0nvwTi5ZenM.oTpRTmQouBvE8S",
+            "rank":0,
+            "username":"fabiorocha",
+            "token":""
+        },
+        {
+            "password":"$2a$12$oirt3S.RexrGmiCyczm.EeaFERI0nvwTi5ZenM.oTpRTmQouBvE8S",
+            "rank":0,
+            "username":"zemiguel",
+            "token":""
+        }
+    ]
+}
+       

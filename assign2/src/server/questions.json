@@ -1,0 +1,55 @@
+{
+    "questions": [
+      {
+        "question": "What is the capital of France?",
+        "options": ["London", "Paris", "Berlin", "Rome"],
+        "answer": "B"
+      },
+      {
+        "question": "What is the chemical symbol for water?",
+        "options": ["H", "O", "Na", "H2O"],
+        "answer": "D"
+      },
+      {
+        "question": "Who painted the Mona Lisa?",
+        "options": ["Pablo Picasso", "Leonardo da Vinci", "Vincent van Gogh", "Michelangelo"],
+        "answer": "B"
+      },
+      {
+        "question": "What is the largest planet in our solar system?",
+        "options": ["Earth", "Mars", "Jupiter", "Saturn"],
+        "answer": "C"
+      },
+      {
+        "question": "Which of the following is not a primary color?",
+        "options": ["Red", "Green", "Yellow", "Purple"],
+        "answer": "D"
+      },
+      {
+        "question": "What is the powerhouse of the cell?",
+        "options": ["Nucleus", "Ribosome", "Mitochondria", "Golgi apparatus"],
+        "answer": "C"
+      },
+      {
+        "question": "Who wrote \"Romeo and Juliet\"?",
+        "options": ["William Shakespeare", "Jane Austen", "Charles Dickens", "J.K. Rowling"],
+        "answer": "A"
+      },
+      {
+        "question": "What is the chemical formula for table salt?",
+        "options": ["NaCl", "H2O", "CO2", "HCl"],
+        "answer": "A"
+      },
+      {
+        "question": "Which planet is known as the \"Red Planet\"?",
+        "options": ["Mars", "Jupiter", "Venus", "Mercury"],
+        "answer": "A"
+      },
+      {
+        "question": "What is the capital of Japan?",
+        "options": ["Tokyo", "Beijing", "Seoul", "Bangkok"],
+        "answer": "A"
+      }
+    ]
+  }
+  

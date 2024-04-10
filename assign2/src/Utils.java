@@ -13,7 +13,8 @@ public class Utils {
 
         try {
             JSONParser parser = new JSONParser();
-            JSONArray questionArray = (JSONArray) parser.parse(new FileReader("/server/questions.json"));
+            JSONObject rootObject = (JSONObject) parser.parse(new FileReader("src/server/questions.json"));
+            JSONArray questionArray = (JSONArray) rootObject.get("questions");
 
             for (Object questionObj : questionArray) {
                 JSONObject questionJson = (JSONObject) questionObj;
@@ -35,6 +36,16 @@ public class Utils {
         }
 
         return questions;
+    }
+
+    public static void main(String[] args) {
+        List<Question> questions = Utils.parseQuestions();
+        for (Question question : questions) {
+            System.out.println(question.getQuestionText());
+            System.out.println("Options: " + question.getOptions());
+            System.out.println("Answer: " + question.getAnswer());
+            System.out.println();
+        }
     }
 }
 
@@ -61,5 +72,4 @@ class Question {
         return answer;
     }
 }
-
 

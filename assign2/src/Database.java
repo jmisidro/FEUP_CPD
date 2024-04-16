@@ -49,4 +49,75 @@ class Database {
         writer.write(this.database.toJSONString());
         writer.close();
     }
+
+    // Authenticate a user with their username and password in the Database
+    public Client login(String username, String password, String token, SocketChannel socket) {
+        // Get the users from the database
+        JSONArray savedUsers = (JSONArray) this.database.get("database");
+        for (Object obj : savedUsers) {
+            JSONObject user = (JSONObject) obj;
+            String savedUsername = (String) user.get("username");
+            String savedPassword = (String) user.get("password");
+
+            // If a match is found, update the user's token and return a new Client object
+            if (savedUsername.equals(username) && BCrypt.checkpw(password, savedPassword)) {
+                user.put("token", token);
+                Long rank = ((Number) user.get("rank")).longValue();
+                return new Client(username, savedPassword, token, rank, socket);
+            }
+        }
+        // If no match is found, return null
+        return null;
+    }
+
+    // Register a new user to the Database
+    public Client register(String username, String password, String token, SocketChannel socket) {
+        // Get the users from the database
+        JSONArray savedUsers = (JSONArray) this.database.get("database");
+        for (Object obj : savedUsers) {
+            JSONObject user = (JSONObject) obj;
+            String savedUsername = (String) user.get("username");
+
+            // If the username already exists, return null
+            if (savedUsername.equals(username)) {
+                return null;
+            }
+        }
+
+        // If the username is not taken, create a new JSONObject for the new user
+        JSONObject newClient = new JSONObject();
+        String passwordHash = BCrypt.hashpw(password, BCrypt.gensalt());
+        newClient.put("username", username);
+        newClient.put("password", passwordHash);
+        newClient.put("token", token);
+        newClient.put("rank", 0);
+
+        // Add the new user to the array of users
+        savedUsers.add(newClient);
+        this.database.put("database", savedUsers);
+
+        // Return a new Client object for the new user
+        return new Client(username, passwordHash, token, 0L, socket);
+    }
+
+    // Restore a user's session based on their token
+    public Client restore(String token, SocketChannel socket) {
+        // Get the users from the database
+        JSONArray savedUsers = (JSONArray) this.database.get("database");
+        for (Object obj : savedUsers) {
+            JSONObject user = (JSONObject) obj;
+            String savedToken = (String) user.get("token");
+
+            // Check if the stored token matches the provided token
+            if (savedToken.equals(token)) {
+                String username = (String) user.get("username");
+                String password = (String) user.get("password");
+                Long rank = ((Number) user.get("rank")).longValue();
+                return new Client(username, password, token, rank, socket);
+            }
+        }
+        // If no matching token is found, return null
+        return null;
+    }
+
 }

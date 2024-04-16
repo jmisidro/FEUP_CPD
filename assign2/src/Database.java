@@ -120,4 +120,67 @@ class Database {
         return null;
     }
 
+    // Update the user's rank in the Database
+    public void updateRank(Client client, int value) {
+        // Get the users from the database
+        JSONArray savedUsers = (JSONArray) this.database.get("database");
+        for (Object obj : savedUsers) {
+            JSONObject user = (JSONObject) obj;
+            String username = (String) user.get("username");
+            if (username.equals(client.getUsername())) {
+
+                // If there is a match, update the user's rank
+                Long rank = ((Number) user.get("rank")).longValue() + value;
+                user.put("rank", rank);
+                return;
+            }
+        }
+    }
+
+    // Invalidates the token for the given user
+    public void invalidateToken(Client client) {
+        // Get the users from the database
+        JSONArray savedUsers = (JSONArray) this.database.get("database");
+        for (Object obj : savedUsers) {
+            JSONObject user = (JSONObject) obj;
+            String username = (String) user.get("username");
+
+            // If the username matches the username of the client whose token needs to be invalidated
+            if (username.equals(client.getUsername())) {
+                user.put("token", "");
+                return;
+            }
+        }
+    }
+
+    // Resets all tokens in the database
+    public void resetTokens() {
+        // Get the users from the database
+        JSONArray savedUsers = (JSONArray) this.database.get("database");
+        for (Object obj : savedUsers) {
+            JSONObject user = (JSONObject) obj;
+            user.put("token", "");
+        }
+    }
+
+    // Returns the leaderboard
+    public String[] getLeaderboard(int n) {
+        String[] leaderboard = new String[n];
+        // Get the users from the database
+        JSONArray savedUsers = (JSONArray) this.database.get("database");
+        List<JSONObject> userList = new ArrayList<>();
+        for (Object obj : savedUsers) {
+            JSONObject user = (JSONObject) obj;
+            userList.add(user);
+        }
+        userList.sort((a, b) -> Long.compare(((Number) b.get("rank")).longValue(), ((Number) a.get("rank")).longValue()));
+        for (int i = 0; i < n && i < userList.size(); i++) {
+            JSONObject user = userList.get(i);
+            String username = (String) user.get("username");
+            long rank = ((Number) user.get("rank")).longValue();
+            leaderboard[i] = username + " - " + rank;
+        }
+        return leaderboard;
+    }
+
 }

@@ -28,8 +28,8 @@ public class Server {
     private long lastPing;
 
     // Game
-    private final int MAX_CONCURRENT_GAMES = 2;
-    private final int PLAYERS_PER_GAME = 5;
+    private final int MAX_CONCURRENT_GAMES = 3;
+    private final int PLAYERS_PER_GAME = 2;
 
     // Represents the time, in seconds, for the server to increase the tolerated interval
     // between players with different rankings
@@ -105,6 +105,28 @@ public class Server {
         this.time_lock.unlock();
     }
 
+    /*
+     * Schedule games by creating a new game with players from the waiting queue
+     */
+    private void gameSchedulerSimple() {
+
+        this.waiting_queue_lock.lock();
+
+        if (this.waiting_queue.size() >= this.PLAYERS_PER_GAME) { // Check if there are enough players in the waiting queue
+            List<Client> gameClients = new ArrayList<>();
+            for (int i = 0; i < this.PLAYERS_PER_GAME; i++) {
+                gameClients.add(this.waiting_queue.remove(0)); // Remove players from the waiting queue and add them to the game
+                System.out.println("Client " + gameClients.get(i).getUsername() + " removed from waiting queue");
+            }
+            Runnable gameRunnable = new Game(gameClients, this.database, this.database_lock, this.waiting_queue, this.waiting_queue_lock);
+
+            this.threadPoolGame.execute(gameRunnable); // Execute the game on a thread from the thread pool
+        }
+        updateServerGUI();
+
+        this.waiting_queue_lock.unlock();
+    }
+
     // Handle incoming client connections
     private void connectionAuthenticator() {
         while (true) {
@@ -128,7 +150,49 @@ public class Server {
     }
 
 
+    private void pingClients() {
+        if(System.currentTimeMillis() - this.lastPing > this.PING_INTERVAL) {
+            this.lastPing = System.currentTimeMillis();
+
+            this.waiting_queue_lock.lock();
+            if (this.waiting_queue.size() == 0) {
+                this.waiting_queue_lock.unlock();
+                return;
+            }
+
+            System.out.println("Pinging clients...");
+
+            Iterator<Client> iterator = this.waiting_queue.iterator();
+            while (iterator.hasNext()) {
+                Client client = iterator.next();
+                try {
+                    Server.request(client.getSocket(), "PING", "");
+                } catch (IOException exception) {
+                    System.out.println("Error pinging client: " + exception);
+                    iterator.remove();
+                } catch (Exception e) {
+                    this.waiting_queue_lock.unlock();
+                    throw new RuntimeException(e);
+                }
+            }
+            this.waiting_queue_lock.unlock();
+        }
+    }
+
+
     public void run() throws IOException {
+
+        // Keeps an eye on the waiting list and launches a new game
+        // whenever it can, according to the threadPoll
+        Thread gameSchedulerThread = new Thread(() -> {
+            while (true) {
+                pingClients();
+                if (mode == 0)
+                    gameSchedulerSimple();
+                else
+                    gameSchedulerSimple(); // TODO: Implement gameSchedulerRanked
+            }
+        });
 
         // Authenticates all connections and push new clients into waiting list
         Thread connectionAuthenticatorThread = new Thread(() -> {
@@ -141,7 +205,7 @@ public class Server {
         this.database_lock.unlock();
 
         // Run threads
-        // TODO: Start the game thead
+        gameSchedulerThread.start();
         connectionAuthenticatorThread.start();
     }
 

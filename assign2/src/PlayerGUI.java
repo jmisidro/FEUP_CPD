@@ -17,11 +17,11 @@ public class PlayerGUI {
 
     private final int timeout;
 
-    JButton rollButton = new JButton("Roll");
-
     JLabel roundLabel = new JLabel("");
-    JLabel diceLabel = new JLabel("0");
-    JLabel opponentDiceLabel = new JLabel("0");
+    JLabel scoreLabel = new JLabel("");
+    JLabel questionLabel = new JLabel("Question");
+
+    String[] options = {"Option 1", "Option 2", "Option 3", "Option 4"};
 
     // Colors for the GUI
     Color bg_color = new Color(10, 4, 41);
@@ -37,10 +37,12 @@ public class PlayerGUI {
         f.setLayout(null);
         f.setVisible(true);
 
+        roundLabel.setForeground(Color.WHITE);
         roundLabel.setBounds(50, 50, 100, 30);
-        diceLabel.setBounds(50, 100, 300, 30);
-        opponentDiceLabel.setBounds(50, 150, 300, 30);
-        rollButton.setBounds(50, 200, 100, 30);
+        questionLabel.setForeground(Color.WHITE);
+        questionLabel.setBounds(50, 100, 300, 30);
+        scoreLabel.setForeground(Color.WHITE);
+        scoreLabel.setBounds(50, 150, 100, 30);
 
         this.timeout = timeoutTime;
 
@@ -234,13 +236,7 @@ public class PlayerGUI {
         this.paintInterface();
     }
 
-    private void updateGameValues(String round, String diceValue, String opponentDiceValue) {
-        diceLabel.setText(diceValue);
-        opponentDiceLabel.setText(opponentDiceValue);
-        roundLabel.setText(round);
-    }
-
-    public void turn() {
+    public String turn() {
         this.clearInterface();
 
         CountDownLatch latch = new CountDownLatch(1);
@@ -254,14 +250,27 @@ public class PlayerGUI {
         // Start the timer
         timer.start();
 
-        rollButton.addActionListener(e -> {
-            latch.countDown();
-        });
 
         f.add(roundLabel);
-        f.add(diceLabel);
-        f.add(opponentDiceLabel);
-        f.add(rollButton);
+        f.add(questionLabel);
+
+        String[] answer = new String[1];
+
+        // create labels for options
+        for (int i = 0; i < this.options.length; i++) {
+            JButton optionButton = new JButton(this.options[i]);
+            optionButton.setBounds(50, 150 + 50 * i, 100, 30);
+            int finalI = i;
+            optionButton.addActionListener(e -> {
+                // return the answer A - D
+                answer[0] = Character.toString((char) (finalI + 65));
+                optionButton.setEnabled(false);
+                optionButton.setBackground(Color.GREEN);
+                latch.countDown();
+            });
+            f.add(optionButton);
+        }
+
 
         this.paintInterface();
 
@@ -271,31 +280,55 @@ public class PlayerGUI {
             e.printStackTrace();
         }
 
+        return answer[0];
+
+    }
+
+
+
+    public void updateQuestion(String[] serverMessages) {
+        System.out.println("Updating question...");
+        System.out.println(Arrays.toString(serverMessages));
+        updateGameValues(serverMessages[1], serverMessages[2],
+                serverMessages[3]
+                        .substring(8, serverMessages[3].length() - 1)
+                        .replace("[", "")
+                        .replace("]", "")
+                        .replace(" ", "")
+                        .split(",")
+        );
+    }
+
+    private void updateGameValues(String round, String question, String[] options) {
+        roundLabel.setText(round);
+        questionLabel.setText(question);
+        this.options = options;
+    }
+
+    public void updateScore(String[] serverMessages) {
+        System.out.println("Updating score...");
+        System.out.println(Arrays.toString(serverMessages));
+        updateScoreValues(serverMessages[1]);
+    }
+
+    private void updateScoreValues(String score) {
+        scoreLabel.setText(score);
     }
 
     public void info() {
         this.clearInterface();
 
         f.add(roundLabel);
-        f.add(diceLabel);
-        f.add(opponentDiceLabel);
-
-        this.paintInterface();
+        f.add(scoreLabel);
 
         this.paintInterface();
     }
 
-    public void updateScore(String[] serverMessages) {
-        System.out.println("Updating score");
-        System.out.println(Arrays.toString(serverMessages));
-        updateGameValues(serverMessages[1], serverMessages[2], serverMessages[3]);
-    }
 
     public String gameOver(String serverMessage) {
         this.clearInterface();
 
         System.out.println("Game over " + serverMessage);
-
 
         JLabel gameOverLabel = new JLabel("Game over!");
         gameOverLabel.setForeground(Color.WHITE);

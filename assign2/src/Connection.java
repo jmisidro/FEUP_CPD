@@ -52,6 +52,16 @@ public class Connection {
     }
 
     // Static method to receive a message from a SocketChannel
+    /*
+     * Receive a message from a SocketChannel
+     * @param socket The SocketChannel to receive the message from
+     * - OPT: Option request
+     * - USR: Data request: username or password
+     * - TKN: Token request: session token value
+     * - NACK: Handle an error in authentication
+     * - AUTH: Authentication success. Receive session token value
+     * - END: End of the connection
+     */
     public static String receive(SocketChannel socket) throws Exception {
         ByteBuffer buffer = ByteBuffer.allocate(1024);          // Create a ByteBuffer with a capacity of 1024 bytes
         int bytesRead = socket.read(buffer);                    // Read from the socket into the buffer
@@ -60,7 +70,7 @@ public class Connection {
 
     public String readToken(String filename) {
 
-        if (filename == null || filename.equals("")) {
+        if (filename == null || filename.isEmpty()) {
             return null;
         }
 
@@ -234,12 +244,15 @@ public class Connection {
                 case "END" -> {
                     Connection.send(this.socket, "ACK");
                 }
-                case "INFO", "TURN", "SCORE" -> { // Player turn. Let's send something to server.
+                case "INFO", "QUESTION", "SCORE" -> { // Player turn. Let's send something to server.
                     gameGUI(serverAnswer, requestType);
                     Connection.send(this.socket, "ACK");
                 }
+                case "TURN" -> {
+                    Connection.send(this.socket, this.playerGui.turn());
+                }
                 case "GAMEOVER" -> {
-                    Connection.send(this.socket, gameOverGUI(serverAnswer[1]));
+                    Connection.send(this.socket, this.playerGui.gameOver(serverAnswer[1]));
                 }
                 case "PING" -> {
                     ; // Doesn't expect an answer back
@@ -281,13 +294,9 @@ public class Connection {
     public void gameGUI(String[] serverMessages, String requestType) {
         switch (requestType) {
             case "INFO" -> this.playerGui.info();
-            case "TURN" -> this.playerGui.turn();
+            case "QUESTION" -> this.playerGui.updateQuestion(serverMessages);
             case "SCORE" -> this.playerGui.updateScore(serverMessages);
         }
-    }
-
-    public String gameOverGUI(String serverMessage) {
-        return this.playerGui.gameOver(serverMessage);
     }
 
     public void closeGUI() {

@@ -25,6 +25,10 @@ public class Game implements Runnable {
         this.waiting_queue_lock = waiting_queue_lock;
         this.questions = Utils.parseQuestions();
         this.scores = new int[this.players.size()];
+        // initialize scores
+        for (int i = 0 ; i < this.players.size() ; i++) {
+            this.scores[i] = 0;
+        }
     }
 
     public void run() {
@@ -132,17 +136,17 @@ public class Game implements Runnable {
         }
 
         // Game rounds loop
-        String[] answers = new String[this.players.size()];
+        String answer;
         for (int round = 0 ; round < this.ROUNDS ; round++) {
             for (Client player : this.players) {
                 printCurrentScores(round);
                 printQuestion(player, round);
                 this.notifyPlayers("INFO", "It's " + player.getUsername() + " turn to answer the question", player);
                 Server.request(player.getSocket(), "TURN", "Your turn to answer the question. Choose a letter between A and D.");
-                answers[this.players.indexOf(player)] = Connection.receive(player.getSocket());
-                System.out.println(" round " + round + " - " + answers[this.players.indexOf(player)]  + ";");
+                answer = Connection.receive(player.getSocket());
+                System.out.println("Player " + player.getUsername() + " answered: " + answer + " in round " + round + " - " + this.questions.get(round).getAnswer());
                 // update scores
-                if (answers[this.players.indexOf(player)].equals(this.questions.get(round).getAnswer())) {
+                if (answer.equals(this.questions.get(round).getAnswer())) {
                     this.scores[this.players.indexOf(player)] += 1;
                 }
             }
@@ -174,13 +178,14 @@ public class Game implements Runnable {
         return winner;
     }
 
-    private void printQuestion(Client client, int round) throws Exception {
+    private void printQuestion(Client player, int round) throws Exception {
         Question question = this.questions.get(round);
         StringBuilder questionText = new StringBuilder();
         questionText.append("Round: ").append(round + 1).append("\n");
         questionText.append("Question: ").append(question.getQuestionText()).append("\n");
         questionText.append("Options: ").append(question.getOptions()).append("\n");
-        Server.request(client.getSocket(), "OPT", questionText.toString());
+        Server.request(player.getSocket(), "QUESTION", questionText.toString());
+        Connection.receive(player.getSocket());
     }
 
     private void printCurrentScores(int currentRound) {

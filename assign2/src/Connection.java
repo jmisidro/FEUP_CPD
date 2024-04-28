@@ -15,7 +15,7 @@ public class Connection {
     private final String TOKEN_PATH = "assign2/client/";     // A path to a directory containing tokens
     private static final String DEFAULT_HOST = "localhost"; // A default host to use if none is provided
     private final long TIMEOUT = 30000;                     // Timeout to avoid slow clients in milliseconds
-    private PlayerGUI playerGui;                            // A GUI to display messages
+    private PlayerMenu playerMenu;                            // A GUI to display messages
     private int authenticationOption = 0;
 
     // Constructor
@@ -249,10 +249,10 @@ public class Connection {
                     Connection.send(this.socket, "ACK");
                 }
                 case "TURN" -> {
-                    Connection.send(this.socket, this.playerGui.turn());
+                    Connection.send(this.socket, this.playerMenu.turn());
                 }
                 case "GAMEOVER" -> {
-                    Connection.send(this.socket, this.playerGui.gameOver(serverAnswer[1]));
+                    Connection.send(this.socket, this.playerMenu.gameOver(serverAnswer[1]));
                 }
                 case "PING" -> {
                     ; // Doesn't expect an answer back
@@ -266,20 +266,20 @@ public class Connection {
     }
 
     public void initGUI() {
-        this.playerGui = new PlayerGUI(10000);
+        this.playerMenu = new PlayerMenu(10000);
     }
 
     public String mainMenuGUI() {
-        authenticationOption = Integer.parseInt(this.playerGui.mainMenu());
+        authenticationOption = Integer.parseInt(this.playerMenu.mainMenu());
         return Integer.toString(authenticationOption);
     }
 
     public String[] loginAndRegister(boolean invalidCredentials, boolean takenUsername) {
-        return this.playerGui.loginAndRegister(invalidCredentials, takenUsername);
+        return this.playerMenu.loginAndRegister(invalidCredentials, takenUsername);
     }
 
     public String getTokenFromGUI(boolean invalidToken) {
-        String[] result = this.playerGui.restore(invalidToken);
+        String[] result = this.playerMenu.restore(invalidToken);
 
         if(result[1].equals("BACK"))
             return result[1];
@@ -288,19 +288,19 @@ public class Connection {
     }
 
     public void queueGUI(String serverMessage) {
-        this.playerGui.queue(serverMessage);
+        this.playerMenu.queue(serverMessage);
     }
 
     public void gameGUI(String[] serverMessages, String requestType) {
         switch (requestType) {
-            case "INFO" -> this.playerGui.info();
-            case "QUESTION" -> this.playerGui.updateQuestion(serverMessages);
-            case "SCORE" -> this.playerGui.updateScore(serverMessages);
+            case "INFO" -> this.playerMenu.info();
+            case "QUESTION" -> this.playerMenu.updateQuestion(serverMessages);
+            case "SCORE" -> this.playerMenu.updateScore(serverMessages);
         }
     }
 
     public void closeGUI() {
-        if (this.playerGui != null) this.playerGui.close();
+        if (this.playerMenu != null) this.playerMenu.close();
     }
 
     public static void main(String[] args) {

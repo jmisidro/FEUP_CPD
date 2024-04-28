@@ -3,7 +3,7 @@ import java.awt.*;
 import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
 
-public class PlayerGUI {
+public class PlayerMenu {
 
     private final JFrame f;
     private final JLabel timeLabel = new JLabel();
@@ -18,7 +18,6 @@ public class PlayerGUI {
     private final int timeout;
 
     JLabel roundLabel = new JLabel("");
-    JLabel scoreLabel = new JLabel("");
     JLabel questionLabel = new JLabel("Question");
 
     String[] options = {"Option 1", "Option 2", "Option 3", "Option 4"};
@@ -27,7 +26,7 @@ public class PlayerGUI {
     Color bg_color = new Color(10, 4, 41);
     Color card_color = new Color(28, 21, 61);
 
-    public PlayerGUI(int timeoutTime) {
+    public PlayerMenu(int timeoutTime) {
 
         f = new JFrame("Pop Quiz Game");
         f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -41,8 +40,6 @@ public class PlayerGUI {
         roundLabel.setBounds(50, 50, 100, 30);
         questionLabel.setForeground(Color.WHITE);
         questionLabel.setBounds(50, 100, 300, 30);
-        scoreLabel.setForeground(Color.WHITE);
-        scoreLabel.setBounds(50, 150, 100, 30);
 
         this.timeout = timeoutTime;
 
@@ -308,18 +305,14 @@ public class PlayerGUI {
     public void updateScore(String[] serverMessages) {
         System.out.println("Updating score...");
         System.out.println(Arrays.toString(serverMessages));
-        updateScoreValues(serverMessages[1]);
+        //updateScoreValues(serverMessages[1]);
     }
 
-    private void updateScoreValues(String score) {
-        scoreLabel.setText(score);
-    }
 
     public void info() {
         this.clearInterface();
 
         f.add(roundLabel);
-        f.add(scoreLabel);
 
         this.paintInterface();
     }

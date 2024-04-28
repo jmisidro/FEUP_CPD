@@ -41,7 +41,7 @@ public class Server {
     private final String DATABASE_PATH = "assign2/server/";
 
     // Clients
-    private List<Client> waiting_queue;
+    private List<Player> waiting_queue;
     private ReentrantLock waiting_queue_lock;
     private final int MAX_CONCURRENT_AUTH = 5;
 
@@ -63,7 +63,7 @@ public class Server {
         // Concurrent fields
         this.threadPoolGame = Executors.newFixedThreadPool(this.MAX_CONCURRENT_GAMES);
         this.threadPoolAuth = Executors.newFixedThreadPool(this.MAX_CONCURRENT_AUTH);
-        this.waiting_queue = new ArrayList<Client>();
+        this.waiting_queue = new ArrayList<Player>();
         this.database = new Database(this.DATABASE_PATH + filename);
         this.token_index = 0;
         this.time = 0;
@@ -113,12 +113,12 @@ public class Server {
         this.waiting_queue_lock.lock();
 
         if (this.waiting_queue.size() >= this.PLAYERS_PER_GAME) { // Check if there are enough players in the waiting queue
-            List<Client> gameClients = new ArrayList<>();
+            List<Player> gamePlayers = new ArrayList<>();
             for (int i = 0; i < this.PLAYERS_PER_GAME; i++) {
-                gameClients.add(this.waiting_queue.remove(0)); // Remove players from the waiting queue and add them to the game
-                System.out.println("Client " + gameClients.get(i).getUsername() + " removed from waiting queue");
+                gamePlayers.add(this.waiting_queue.remove(0)); // Remove players from the waiting queue and add them to the game
+                System.out.println("Player " + gamePlayers.get(i).getUsername() + " removed from waiting queue");
             }
-            Runnable gameRunnable = new Game(gameClients, this.database, this.database_lock, this.waiting_queue, this.waiting_queue_lock);
+            Runnable gameRunnable = new Game(gamePlayers, this.database, this.database_lock, this.waiting_queue, this.waiting_queue_lock);
 
             this.threadPoolGame.execute(gameRunnable); // Execute the game on a thread from the thread pool
         }
@@ -132,7 +132,7 @@ public class Server {
         while (true) {
             try {
                 SocketChannel clientSocket = this.serverSocket.accept();
-                System.out.println("Client connected: " + clientSocket.getRemoteAddress());
+                System.out.println("Player connected: " + clientSocket.getRemoteAddress());
 
                 Runnable newClientRunnable = () -> {
                     try {
@@ -155,20 +155,20 @@ public class Server {
             this.lastPing = System.currentTimeMillis();
 
             this.waiting_queue_lock.lock();
-            if (this.waiting_queue.size() == 0) {
+            if (this.waiting_queue.isEmpty()) {
                 this.waiting_queue_lock.unlock();
                 return;
             }
 
             System.out.println("Pinging clients...");
 
-            Iterator<Client> iterator = this.waiting_queue.iterator();
+            Iterator<Player> iterator = this.waiting_queue.iterator();
             while (iterator.hasNext()) {
-                Client client = iterator.next();
+                Player player = iterator.next();
                 try {
-                    Server.request(client.getSocket(), "PING", "");
+                    Server.request(player.getSocket(), "PING", "");
                 } catch (IOException exception) {
-                    System.out.println("Error pinging client: " + exception);
+                    System.out.println("Error pinging player: " + exception);
                     iterator.remove();
                 } catch (Exception e) {
                     this.waiting_queue_lock.unlock();
@@ -223,32 +223,28 @@ public class Server {
     }
 
     /*
-     * Inserts a client in the waiting queue
-     * @param client: Client object to insert in the queue
+     * Adds a player to the waiting queue
+     * @param player: Player object to insert in the queue
      * @return void
      */
-    private void insertClient(Client client) {
-
+    private void addPlayer(Player player) {
+        this.waiting_queue_lock.lock();
         try {
-            this.waiting_queue_lock.lock();
-            for (Client c : this.waiting_queue) {
-                if (c.equals(client)) {
-                    // If the client is already in the queue, their socket is updated with the new one
-                    c.setSocket(client.getSocket());
-                    System.out.println("Client " + client.getUsername() + " reconnected. Queue size: " + this.waiting_queue.size());
-                    Server.request(client.getSocket(), "QUEUE", "You are already in the waiting queue with " + client.getRank() + " points.");
-                    Connection.receive(client.getSocket());
-                    this.waiting_queue_lock.unlock();
-                    return;
-                }
+            Player existingPlayer = this.waiting_queue.stream()
+                    .filter(p -> p.equals(player))
+                    .findFirst()
+                    .orElse(null);
+
+            if (existingPlayer != null) {
+                existingPlayer.setSocket(player.getSocket());
+                System.out.println("Player " + player.getUsername() + " reconnected. Queue size: " + this.waiting_queue.size());
+                Server.request(player.getSocket(), "QUEUE", "You are already in the waiting queue with " + player.getRank() + " points.");
+            } else {
+                this.waiting_queue.add(player);
+                System.out.println("Player " + player.getUsername() + " is now in waiting queue. Queue size: " + this.waiting_queue.size());
+                Server.request(player.getSocket(), "QUEUE", "You entered in waiting queue with ranking  " + player.getRank() + " points.");
             }
-
-            // If the client is not already in the queue, add them to the end of the queue
-            this.waiting_queue.add(client);
-            Server.request(client.getSocket(), "QUEUE", "You entered in waiting queue with ranking  " + client.getRank() + " points.");
-            Connection.receive(client.getSocket());
-            System.out.println("Client " + client.getUsername() + " is now in waiting queue. Queue size: " + this.waiting_queue.size());
-
+            Connection.receive(player.getSocket());
         } catch (Exception exception) {
             System.out.println("Error during insert in waiting queue. Info: " + exception.getMessage());
         } finally {
@@ -261,7 +257,7 @@ public class Server {
      */
     private void sortClients() {
         this.waiting_queue_lock.lock();
-        this.waiting_queue.sort(Comparator.comparingLong(Client::getRank));
+        this.waiting_queue.sort(Comparator.comparingLong(Player::getRank));
         this.waiting_queue_lock.unlock();
     }
 
@@ -270,26 +266,26 @@ public class Server {
      * @param clientSocket: SocketChannel to send the request
      * @param username: Username
      * @param password: Password
-     * @return Client object if the authentication is successful, null otherwise
+     * @return Player object if the authentication is successful, null otherwise
      */
-    public Client login(SocketChannel clientSocket, String username, String password) throws Exception {
+    public Player login(SocketChannel clientSocket, String username, String password) throws Exception {
 
         if (Objects.equals(username, "BACK") || Objects.equals(password, "BACK"))
             return null;
 
         String token = this.getToken(username);
-        Client client;
+        Player player;
 
         try {
             this.database_lock.lock();
-            client = this.database.login(username, password, token, clientSocket);
+            player = this.database.login(username, password, token, clientSocket);
             this.database.backup();
             this.database_lock.unlock();
 
-            if (client != null) {
+            if (player != null) {
                 Server.request(clientSocket, "AUTH", "token-" + username + ".txt\n" + token);
                 Connection.receive(clientSocket);
-                return client;
+                return player;
             } else {
                 Server.request(clientSocket, "NACK", "Wrong username or password");
                 Connection.receive(clientSocket);
@@ -307,26 +303,26 @@ public class Server {
      * @param clientSocket: SocketChannel to send the request
      * @param username: Username
      * @param password: Password
-     * @return Client object if the registration is successful, null otherwise
+     * @return Player object if the registration is successful, null otherwise
      */
-    public Client register(SocketChannel clientSocket, String username, String password) throws Exception {
+    public Player register(SocketChannel clientSocket, String username, String password) throws Exception {
 
         if (Objects.equals(username, "BACK") || Objects.equals(password, "BACK"))
             return null;
 
         String token = this.getToken(username);
-        Client client;
+        Player player;
 
         try {
             this.database_lock.lock();
-            client = this.database.register(username, password, token, clientSocket);
+            player = this.database.register(username, password, token, clientSocket);
             this.database.backup();
             this.database_lock.unlock();
 
-            if (client != null) {
+            if (player != null) {
                 Server.request(clientSocket, "AUTH", "token-" + username + ".txt\n" + token);
                 Connection.receive(clientSocket);
-                return client;
+                return player;
             } else {
                 Server.request(clientSocket, "NACK", "Username already in use");
                 Connection.receive(clientSocket);
@@ -343,38 +339,38 @@ public class Server {
      * Restores a client connection
      * @param clientSocket: SocketChannel to send the request
      * @param token: Session token
-     * @return Client object if the restoration is successful, null otherwise
+     * @return Player object if the restoration is successful, null otherwise
      */
-    public Client restore(SocketChannel clientSocket, String token) throws Exception {
+    public Player restore(SocketChannel clientSocket, String token) throws Exception {
 
         this.database_lock.lock();
-        Client client = this.database.restore(token, clientSocket);
+        Player player = this.database.restore(token, clientSocket);
         this.database.backup();
         this.database_lock.unlock();
 
-        if (client != null) {
-            Server.request(clientSocket, "AUTH", "token-" + client.getUsername() + ".txt\n" + token);
+        if (player != null) {
+            Server.request(clientSocket, "AUTH", "token-" + player.getUsername() + ".txt\n" + token);
             Connection.receive(clientSocket);
         } else {
             Server.request(clientSocket, "NACK","Invalid session token");
             Connection.receive(clientSocket);
         }
-        return client;
+        return player;
     }
 
     /*
     * Sends a request to the client
     * @param socket: SocketChannel to send the request
     * @param requestType: Type of request
-    *  - END: Connection terminated
-    *  - TKN: Session token value
-    *  - USR: Username
-    *  - PSW: Password
-    *  - OPT: Menu
-    *  - AUTH: tokenName + tokenName
-    *  - INFO: Message
-    *  - NACK: Error
-    *  - TURN: Message
+    *  - END: Connection terminated -> receives ACK
+    *  - TKN: Session token value -> receives a session token
+    *  - USR: Username -> receives username
+    *  - PSW: Password -> receives password
+    *  - OPT: Menu options -> receives option
+    *  - AUTH: tokenName + tokenName -> receives ACK
+    *  - INFO: Message -> receives ACK
+    *  - NACK: Error -> receives ACK
+    *  - TURN: Message -> receives input
     * @param message: Message to send
     */
     public static void request(SocketChannel socket, String requestType, String message) throws Exception {
@@ -387,7 +383,7 @@ public class Server {
     public void handleClient(SocketChannel clientSocket) throws Exception {
 
         String input;
-        Client client = null;
+        Player player = null;
         long startTime = System.currentTimeMillis();
 
         do {
@@ -412,7 +408,7 @@ public class Server {
                     if (username.equals("BACK")) continue;
                     Server.request(clientSocket, "PSW", "Password?");
                     password = Connection.receive(clientSocket);
-                    client = this.login(clientSocket, username, password);
+                    player = this.login(clientSocket, username, password);
                 }
                 case "2" -> {
                     Server.request(clientSocket, "USR", "Username?");
@@ -421,14 +417,14 @@ public class Server {
                     if (username.equals("BACK")) continue;
                     Server.request(clientSocket, "PSW", "Password?");
                     password = Connection.receive(clientSocket);
-                    client = this.register(clientSocket, username, password);
+                    player = this.register(clientSocket, username, password);
                 }
                 case "3" -> {
                     Server.request(clientSocket, "TKN", "Token?");
                     token = Connection.receive(clientSocket);
                     System.out.println("TOKEN: " + token);
                     if (token.equals("BACK")) continue;
-                    client = this.restore(clientSocket, token);
+                    player = this.restore(clientSocket, token);
                 }
                 default -> {
                     Server.request(clientSocket, "END", "Connection terminated");
@@ -438,15 +434,15 @@ public class Server {
             }
 
             // Deal with waiting queue
-            if (client != null) {
-                this.insertClient(client);
+            if (player != null) {
+                this.addPlayer(player);
                 if (this.mode == 1) {
                     this.sortClients();
                     this.resetTime();
                 }
             }
 
-        } while (client == null);
+        } while (player == null);
         updateServerGUI();
     }
 

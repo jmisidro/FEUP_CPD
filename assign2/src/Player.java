@@ -1,6 +1,6 @@
 import java.nio.channels.SocketChannel;
 
-public class Client {
+public class Player {
 
     private final String username;
     private final String password;
@@ -9,7 +9,7 @@ public class Client {
     private SocketChannel socket;
     private int timeInQueue = 0;
 
-    Client(String username, String password, String token, Long rank, SocketChannel socket) {
+    Player(String username, String password, String token, Long rank, SocketChannel socket) {
         this.username = username;
         this.password = password;
         this.token = token;
@@ -37,7 +37,7 @@ public class Client {
         this.socket = socket;
     }
 
-    public boolean equals(Client client) {
-        return this.username.equals(client.getUsername());
+    public boolean equals(Player player) {
+        return this.username.equals(player.getUsername());
     }
 }

@@ -51,7 +51,7 @@ class Database {
     }
 
     // Authenticate a user with their username and password in the Database
-    public Client login(String username, String password, String token, SocketChannel socket) {
+    public Player login(String username, String password, String token, SocketChannel socket) {
         // Get the users from the database
         JSONArray savedUsers = (JSONArray) this.database.get("database");
         for (Object obj : savedUsers) {
@@ -59,11 +59,11 @@ class Database {
             String savedUsername = (String) user.get("username");
             String savedPassword = (String) user.get("password");
 
-            // If a match is found, update the user's token and return a new Client object
+            // If a match is found, update the user's token and return a new Player object
             if (savedUsername.equals(username) && BCrypt.checkpw(password, savedPassword)) {
                 user.put("token", token);
                 Long rank = ((Number) user.get("rank")).longValue();
-                return new Client(username, savedPassword, token, rank, socket);
+                return new Player(username, savedPassword, token, rank, socket);
             }
         }
         // If no match is found, return null
@@ -71,7 +71,7 @@ class Database {
     }
 
     // Register a new user to the Database
-    public Client register(String username, String password, String token, SocketChannel socket) {
+    public Player register(String username, String password, String token, SocketChannel socket) {
         // Get the users from the database
         JSONArray savedUsers = (JSONArray) this.database.get("database");
         for (Object obj : savedUsers) {
@@ -96,12 +96,12 @@ class Database {
         savedUsers.add(newClient);
         this.database.put("database", savedUsers);
 
-        // Return a new Client object for the new user
-        return new Client(username, passwordHash, token, 0L, socket);
+        // Return a new Player object for the new user
+        return new Player(username, passwordHash, token, 0L, socket);
     }
 
     // Restore a user's session based on their token
-    public Client restore(String token, SocketChannel socket) {
+    public Player restore(String token, SocketChannel socket) {
         // Get the users from the database
         JSONArray savedUsers = (JSONArray) this.database.get("database");
         for (Object obj : savedUsers) {
@@ -113,7 +113,7 @@ class Database {
                 String username = (String) user.get("username");
                 String password = (String) user.get("password");
                 Long rank = ((Number) user.get("rank")).longValue();
-                return new Client(username, password, token, rank, socket);
+                return new Player(username, password, token, rank, socket);
             }
         }
         // If no matching token is found, return null
@@ -121,13 +121,13 @@ class Database {
     }
 
     // Update the user's rank in the Database
-    public void updateRank(Client client, int value) {
+    public void updateRank(Player player, int value) {
         // Get the users from the database
         JSONArray savedUsers = (JSONArray) this.database.get("database");
         for (Object obj : savedUsers) {
             JSONObject user = (JSONObject) obj;
             String username = (String) user.get("username");
-            if (username.equals(client.getUsername())) {
+            if (username.equals(player.getUsername())) {
 
                 // If there is a match, update the user's rank
                 Long rank = ((Number) user.get("rank")).longValue() + value;
@@ -138,15 +138,15 @@ class Database {
     }
 
     // Invalidates the token for the given user
-    public void invalidateToken(Client client) {
+    public void invalidateToken(Player player) {
         // Get the users from the database
         JSONArray savedUsers = (JSONArray) this.database.get("database");
         for (Object obj : savedUsers) {
             JSONObject user = (JSONObject) obj;
             String username = (String) user.get("username");
 
-            // If the username matches the username of the client whose token needs to be invalidated
-            if (username.equals(client.getUsername())) {
+            // If the username matches the username of the player whose token needs to be invalidated
+            if (username.equals(player.getUsername())) {
                 user.put("token", "");
                 return;
             }

@@ -30,6 +30,13 @@ public class Game implements Runnable {
         }
     }
 
+    /*
+     * Start the game.
+     * The game is made of at least 2 players.
+     * The game is played in 4 rounds.
+     * The winner is the player with the highest score.
+     * If there's a tie, the players will divide between themselves the gained elo.
+     */
     public void run() {
         try {
             System.out.println("Starting quiz with " + this.players.size() + " players");
@@ -146,6 +153,11 @@ public class Game implements Runnable {
         return determineWinner();
     }
 
+    /*
+     * Determine the winner of the game.
+     * The winner is the player with the highest score.
+     * The winner's rank is updated in the database.
+     */
     private String determineWinner() throws Exception {
         String winner = "";
         int winnerScore = 0;
@@ -211,6 +223,12 @@ public class Game implements Runnable {
                 .forEach(player -> sendPlayerMessage(player, messageType, message));
     }
 
+    /*
+     * Send a message to a player.
+     * @param player The player to send the message to
+     * @param messageType The type of the message
+     * @param message The message to be sent
+     */
     private void sendPlayerMessage(Player player, String messageType, String message) {
         try {
             Server.request(player.getSocket(), messageType, message);

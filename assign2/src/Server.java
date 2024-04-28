@@ -55,7 +55,6 @@ public class Server {
         this.startTime = System.currentTimeMillis();
 
         // Concurrent fields
-        // Game
         int MAX_CONCURRENT_GAMES = 3; // Maximum number of concurrent games
         this.threadPoolGame = Executors.newFixedThreadPool(MAX_CONCURRENT_GAMES);
         this.threadPoolAuth = Executors.newFixedThreadPool(MAX_CONCURRENT_AUTH);
@@ -135,21 +134,27 @@ public class Server {
         while (true) {
             try {
                 SocketChannel clientSocket = serverSocket.accept();
-                System.out.println("Player connected: " + clientSocket.getRemoteAddress());
-
-                Runnable newClientRunnable = () -> {
-                    try {
-                        handleClient(clientSocket);
-                    } catch (Exception exception) {
-                        System.out.println("Error handling new client: " + exception);
-                    }
-                };
-                this.threadPoolAuth.execute(newClientRunnable);
-
+                handleNewClient(clientSocket);
             } catch (Exception exception) {
                 System.out.println("Error handling new client: " + exception);
             }
         }
+    }
+
+    /*
+     * Handles a new client connection
+     * @param clientSocket: SocketChannel to send the request
+     */
+    private void handleNewClient(SocketChannel clientSocket) throws IOException {
+        System.out.println("Player connected: " + clientSocket.getRemoteAddress());
+        Runnable newClientRunnable = () -> {
+            try {
+                handlePlayer(clientSocket);
+            } catch (Exception exception) {
+                System.out.println("Error handling new client: " + exception);
+            }
+        };
+        this.threadPoolAuth.execute(newClientRunnable);
     }
 
     /*
@@ -169,6 +174,7 @@ public class Server {
 
             System.out.println("Pinging clients...");
 
+            // Ping all clients in the waiting queue
             Iterator<Player> iterator = waiting_queue.iterator();
             while (iterator.hasNext()) {
                 Player player = iterator.next();
@@ -186,7 +192,9 @@ public class Server {
         }
     }
 
-
+    /*
+     * Runs the server
+     */
     public void run() throws IOException {
 
         // Keeps an eye on the waiting list and launches a new game
@@ -385,64 +393,38 @@ public class Server {
     }
 
     /*
-     * Handles a new client connection
+     * Handles a new player connection
      */
-    public void handleClient(SocketChannel clientSocket) throws Exception {
-
+    public void handlePlayer(SocketChannel playerSocket) throws Exception {
         String input;
         Player player = null;
         long startTime = System.currentTimeMillis();
 
         do {
-            // Timeout to avoid slow clients in authentication (milliseconds)
             int TIMEOUT = 30000;
-            // Check if timeout has been reached
             if (System.currentTimeMillis() - startTime >= TIMEOUT) {
-                System.out.println("Connection timeout");
-                Server.request(clientSocket, "END", "Connection terminated");
+                terminateConnection(playerSocket, "Connection timeout");
                 return;
             }
 
-            // Login, register, restore and quit choosing options
-            Server.request(clientSocket, "OPT", "1 - Login\n2 - Register\n3 - Restore Connection\n4 - Quit");
-            input = Connection.receive(clientSocket).toUpperCase();
+            input = getOptionFromPlayer(playerSocket);
 
-            // Authentication protocol
-            String username, password, token;
             switch (input) {
-                case "1" -> {
-                    Server.request(clientSocket, "USR", "Username?");
-                    username = Connection.receive(clientSocket);
-                    System.out.println(username);
-                    if (username.equals("BACK")) continue;
-                    Server.request(clientSocket, "PSW", "Password?");
-                    password = Connection.receive(clientSocket);
-                    player = this.login(clientSocket, username, password);
-                }
-                case "2" -> {
-                    Server.request(clientSocket, "USR", "Username?");
-                    username = Connection.receive(clientSocket);
-                    System.out.println(username);
-                    if (username.equals("BACK")) continue;
-                    Server.request(clientSocket, "PSW", "Password?");
-                    password = Connection.receive(clientSocket);
-                    player = this.register(clientSocket, username, password);
-                }
+                case "1" -> player = authenticatePlayer(playerSocket, "login");
+                case "2" -> player = authenticatePlayer(playerSocket, "register");
                 case "3" -> {
-                    Server.request(clientSocket, "TKN", "Token?");
-                    token = Connection.receive(clientSocket);
+                    Server.request(playerSocket, "TKN", "Token?");
+                    String token = Connection.receive(playerSocket);
                     System.out.println("TOKEN: " + token);
                     if (token.equals("BACK")) continue;
-                    player = this.restore(clientSocket, token);
+                    player = restore(playerSocket, token);
                 }
                 default -> {
-                    Server.request(clientSocket, "END", "Connection terminated");
-                    clientSocket.close();
+                    terminateConnection(playerSocket, "Connection terminated");
                     return;
                 }
             }
 
-            // Deal with waiting queue
             if (player != null) {
                 this.addPlayer(player);
                 if (mode == 1) {
@@ -453,6 +435,47 @@ public class Server {
 
         } while (player == null);
         updateServerMenu();
+    }
+
+    /*
+     * Terminates the connection with the player
+     * @param playerSocket: SocketChannel to send the request
+     * @param message: Message to send
+     */
+    private void terminateConnection(SocketChannel playerSocket, String message) throws Exception {
+        System.out.println("Connection timeout");
+        Server.request(playerSocket, "END", message);
+        playerSocket.close();
+    }
+
+    /*
+     * Gets the option from the player
+     * @param playerSocket: SocketChannel to send the request
+     * @return Option chosen by the player
+     */
+    private String getOptionFromPlayer(SocketChannel playerSocket) throws Exception {
+        Server.request(playerSocket, "OPT", "1 - Login\n2 - Register\n3 - Restore Connection\n4 - Quit");
+        return Connection.receive(playerSocket).toUpperCase();
+    }
+
+    /*
+     * Authenticates a player
+     * @param playerSocket: SocketChannel to send the request
+     * @param authenticationType: Type of authentication
+     * @return Player object if the authentication is successful, null otherwise
+     */
+    private Player authenticatePlayer(SocketChannel playerSocket, String authenticationType) throws Exception {
+        Server.request(playerSocket, "USR", "Username?");
+        String username = Connection.receive(playerSocket);
+        if (username.equals("BACK")) return null;
+        Server.request(playerSocket, "PSW", "Password?");
+        String password = Connection.receive(playerSocket);
+
+        return switch (authenticationType) {
+            case "login" -> login(playerSocket, username, password);
+            case "register" -> register(playerSocket, username, password);
+            default -> null;
+        };
     }
 
     /*

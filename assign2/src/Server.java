@@ -22,14 +22,7 @@ public class Server {
     private long startTime;
     private final ReentrantLock time_lock;
 
-    // Timeouts
-    private final int TIMEOUT = 30000;          // Timeout to avoid slow clients in authentication (milliseconds)
-    private final int PING_INTERVAL = 10000;    // Time between pings to clients (milliseconds)
     private long lastPing;
-
-    // Game
-    private final int MAX_CONCURRENT_GAMES = 3;
-    private final int PLAYERS_PER_GAME = 2;
 
     // Represents the time, in seconds, for the server to increase the tolerated interval
     // between players with different rankings
@@ -40,17 +33,18 @@ public class Server {
     private ReentrantLock database_lock;
     private final String DATABASE_PATH = "assign2/server/";
 
-    // Clients
+    // Players
     private List<Player> waiting_queue;
     private ReentrantLock waiting_queue_lock;
-    private final int MAX_CONCURRENT_AUTH = 5;
+
+    private final int MAX_CONCURRENT_AUTH = 5; // Maximum number of concurrent authentications
 
     // Token Generation
     private int token_index;
-    private ReentrantLock token_lock;
+    private final ReentrantLock token_lock;
 
-    // GUI
-    private final ServerGUI serverGUI;
+    // Server Menu
+    private final ServerMenu serverMenu;
 
 
     public Server(int port, int mode, String filename) throws IOException, ParseException {
@@ -61,8 +55,10 @@ public class Server {
         this.startTime = System.currentTimeMillis();
 
         // Concurrent fields
-        this.threadPoolGame = Executors.newFixedThreadPool(this.MAX_CONCURRENT_GAMES);
-        this.threadPoolAuth = Executors.newFixedThreadPool(this.MAX_CONCURRENT_AUTH);
+        // Game
+        int MAX_CONCURRENT_GAMES = 3; // Maximum number of concurrent games
+        this.threadPoolGame = Executors.newFixedThreadPool(MAX_CONCURRENT_GAMES);
+        this.threadPoolAuth = Executors.newFixedThreadPool(MAX_CONCURRENT_AUTH);
         this.waiting_queue = new ArrayList<Player>();
         this.database = new Database(this.DATABASE_PATH + filename);
         this.token_index = 0;
@@ -74,64 +70,71 @@ public class Server {
         this.token_lock = new ReentrantLock();
         this.time_lock = new ReentrantLock();
 
-        // Server GUI
-        this.serverGUI = new ServerGUI();
+        // Server Menu
+        this.serverMenu = new ServerMenu();
         this.lastPing = System.currentTimeMillis();
     }
 
-    // Server usage
+    /*
+     * Prints the usage of the Server class
+     */
     public static void printUsage() {
-        System.out.println("usage: java Server <PORT> <MODE> <DATABASE>");
-        System.out.println("       <MODE>");
-        System.out.println("           0 - Simple Mode");
-        System.out.println("           1 - Ranked Mode");
-        System.out.println("       <DATABASE>");
-        System.out.println("           JSON file name inside server folder (e.g. database.json)");
+        String usage = "usage: java Server <PORT> <MODE> <DATABASE>\n" +
+                "       <MODE>\n" +
+                "           0 - Simple Mode\n" +
+                "           1 - Ranked Mode\n" +
+                "       <DATABASE>\n" +
+                "           JSON file name inside server folder (e.g. database.json)";
+        System.out.println(usage);
     }
 
-    // Starts the server and listens for connections on the specified port
+    /*
+     * Starts the server
+     */
     public void start() throws IOException {
-        this.serverSocket = ServerSocketChannel.open();
-        serverSocket.bind(new InetSocketAddress(this.port));
+        serverSocket = ServerSocketChannel.open();
+        serverSocket.bind(new InetSocketAddress(port));
         String mode = this.mode == 1 ? "ranked" : "simple";
-        System.out.println("Server is listening on port " + this.port + " with " + mode + " mode");
+        System.out.println("Server is listening on port " + port + " with " + mode + " mode");
     }
 
-    // Resets the server time: time and startTime
+    /*
+     * Resets the time
+     */
     private void resetTime() {
-        this.time_lock.lock();
-        this.startTime = System.currentTimeMillis();
-        this.time = 0;
-        this.time_lock.unlock();
+        time_lock.lock();
+        startTime = System.currentTimeMillis();
+        time = 0;
+        time_lock.unlock();
     }
 
     /*
      * Schedule games by creating a new game with players from the waiting queue
      */
-    private void gameSchedulerSimple() {
+    private void scheduleSimpleGame() {
+        waiting_queue_lock.lock();
 
-        this.waiting_queue_lock.lock();
+        int PLAYERS_PER_GAME = 2;
+        if (waiting_queue.size() >= PLAYERS_PER_GAME) {
+            List<Player> gamePlayers = new ArrayList<>(waiting_queue.subList(0, PLAYERS_PER_GAME));
+            waiting_queue.removeAll(gamePlayers);
+            gamePlayers.forEach(player -> System.out.println("Player " + player.getUsername() + " removed from waiting queue"));
 
-        if (this.waiting_queue.size() >= this.PLAYERS_PER_GAME) { // Check if there are enough players in the waiting queue
-            List<Player> gamePlayers = new ArrayList<>();
-            for (int i = 0; i < this.PLAYERS_PER_GAME; i++) {
-                gamePlayers.add(this.waiting_queue.remove(0)); // Remove players from the waiting queue and add them to the game
-                System.out.println("Player " + gamePlayers.get(i).getUsername() + " removed from waiting queue");
-            }
-            Runnable gameRunnable = new Game(gamePlayers, this.database, this.database_lock, this.waiting_queue, this.waiting_queue_lock);
-
-            this.threadPoolGame.execute(gameRunnable); // Execute the game on a thread from the thread pool
+            Runnable gameRunnable = new Game(gamePlayers, database, database_lock, waiting_queue, waiting_queue_lock);
+            threadPoolGame.execute(gameRunnable);
         }
-        updateServerGUI();
+        updateServerMenu();
 
-        this.waiting_queue_lock.unlock();
+        waiting_queue_lock.unlock();
     }
 
-    // Handle incoming client connections
+    /*
+     * Handles the authentication of new clients
+     */
     private void connectionAuthenticator() {
         while (true) {
             try {
-                SocketChannel clientSocket = this.serverSocket.accept();
+                SocketChannel clientSocket = serverSocket.accept();
                 System.out.println("Player connected: " + clientSocket.getRemoteAddress());
 
                 Runnable newClientRunnable = () -> {
@@ -149,20 +152,24 @@ public class Server {
         }
     }
 
-
+    /*
+     * Pings the clients in the waiting queue
+     */
     private void pingClients() {
-        if(System.currentTimeMillis() - this.lastPing > this.PING_INTERVAL) {
-            this.lastPing = System.currentTimeMillis();
+        // Time between pings to clients (milliseconds)
+        int PING_INTERVAL = 10000;
+        if(System.currentTimeMillis() - lastPing > PING_INTERVAL) {
+            lastPing = System.currentTimeMillis();
 
-            this.waiting_queue_lock.lock();
-            if (this.waiting_queue.isEmpty()) {
-                this.waiting_queue_lock.unlock();
+            waiting_queue_lock.lock();
+            if (waiting_queue.isEmpty()) {
+                waiting_queue_lock.unlock();
                 return;
             }
 
             System.out.println("Pinging clients...");
 
-            Iterator<Player> iterator = this.waiting_queue.iterator();
+            Iterator<Player> iterator = waiting_queue.iterator();
             while (iterator.hasNext()) {
                 Player player = iterator.next();
                 try {
@@ -171,11 +178,11 @@ public class Server {
                     System.out.println("Error pinging player: " + exception);
                     iterator.remove();
                 } catch (Exception e) {
-                    this.waiting_queue_lock.unlock();
+                    waiting_queue_lock.unlock();
                     throw new RuntimeException(e);
                 }
             }
-            this.waiting_queue_lock.unlock();
+            waiting_queue_lock.unlock();
         }
     }
 
@@ -188,9 +195,9 @@ public class Server {
             while (true) {
                 pingClients();
                 if (mode == 0)
-                    gameSchedulerSimple();
+                    scheduleSimpleGame();
                 else
-                    gameSchedulerSimple(); // TODO: Implement gameSchedulerRanked
+                    scheduleSimpleGame(); // TODO: Implement gameSchedulerRanked
             }
         });
 
@@ -200,9 +207,9 @@ public class Server {
         });
 
         // Resets the saved player tokens before starting the server
-        this.database_lock.lock();
-        this.database.resetTokens();
-        this.database_lock.unlock();
+        database_lock.lock();
+        database.resetTokens();
+        database_lock.unlock();
 
         // Run threads
         gameSchedulerThread.start();
@@ -215,10 +222,10 @@ public class Server {
      * @return Session token
      */
     private String getToken(String username) {
-        this.token_lock.lock();
-        int index = this.token_index;
-        this.token_index++;
-        this.token_lock.unlock();
+        token_lock.lock();
+        int index = token_index;
+        token_index++;
+        token_lock.unlock();
         return BCrypt.hashpw(username + index, BCrypt.gensalt());
     }
 
@@ -228,37 +235,37 @@ public class Server {
      * @return void
      */
     private void addPlayer(Player player) {
-        this.waiting_queue_lock.lock();
+        waiting_queue_lock.lock();
         try {
-            Player existingPlayer = this.waiting_queue.stream()
+            Player existingPlayer = waiting_queue.stream()
                     .filter(p -> p.equals(player))
                     .findFirst()
                     .orElse(null);
 
             if (existingPlayer != null) {
                 existingPlayer.setSocket(player.getSocket());
-                System.out.println("Player " + player.getUsername() + " reconnected. Queue size: " + this.waiting_queue.size());
+                System.out.println("Player " + player.getUsername() + " reconnected. Queue size: " + waiting_queue.size());
                 Server.request(player.getSocket(), "QUEUE", "You are already in the waiting queue with " + player.getRank() + " points.");
             } else {
-                this.waiting_queue.add(player);
-                System.out.println("Player " + player.getUsername() + " is now in waiting queue. Queue size: " + this.waiting_queue.size());
+                waiting_queue.add(player);
+                System.out.println("Player " + player.getUsername() + " is now in waiting queue. Queue size: " + waiting_queue.size());
                 Server.request(player.getSocket(), "QUEUE", "You entered in waiting queue with ranking  " + player.getRank() + " points.");
             }
             Connection.receive(player.getSocket());
         } catch (Exception exception) {
             System.out.println("Error during insert in waiting queue. Info: " + exception.getMessage());
         } finally {
-            this.waiting_queue_lock.unlock();
+            waiting_queue_lock.unlock();
         }
     }
 
     /*
      * Sorts the waiting queue by rank
      */
-    private void sortClients() {
-        this.waiting_queue_lock.lock();
-        this.waiting_queue.sort(Comparator.comparingLong(Player::getRank));
-        this.waiting_queue_lock.unlock();
+    private void sortPlayers() {
+        waiting_queue_lock.lock();
+        waiting_queue.sort(Comparator.comparingLong(Player::getRank));
+        waiting_queue_lock.unlock();
     }
 
     /*
@@ -277,10 +284,10 @@ public class Server {
         Player player;
 
         try {
-            this.database_lock.lock();
-            player = this.database.login(username, password, token, clientSocket);
-            this.database.backup();
-            this.database_lock.unlock();
+            database_lock.lock();
+            player = database.login(username, password, token, clientSocket);
+            database.backup();
+            database_lock.unlock();
 
             if (player != null) {
                 Server.request(clientSocket, "AUTH", "token-" + username + ".txt\n" + token);
@@ -314,10 +321,10 @@ public class Server {
         Player player;
 
         try {
-            this.database_lock.lock();
-            player = this.database.register(username, password, token, clientSocket);
-            this.database.backup();
-            this.database_lock.unlock();
+            database_lock.lock();
+            player = database.register(username, password, token, clientSocket);
+            database.backup();
+            database_lock.unlock();
 
             if (player != null) {
                 Server.request(clientSocket, "AUTH", "token-" + username + ".txt\n" + token);
@@ -343,10 +350,10 @@ public class Server {
      */
     public Player restore(SocketChannel clientSocket, String token) throws Exception {
 
-        this.database_lock.lock();
-        Player player = this.database.restore(token, clientSocket);
-        this.database.backup();
-        this.database_lock.unlock();
+        database_lock.lock();
+        Player player = database.restore(token, clientSocket);
+        database.backup();
+        database_lock.unlock();
 
         if (player != null) {
             Server.request(clientSocket, "AUTH", "token-" + player.getUsername() + ".txt\n" + token);
@@ -387,8 +394,10 @@ public class Server {
         long startTime = System.currentTimeMillis();
 
         do {
+            // Timeout to avoid slow clients in authentication (milliseconds)
+            int TIMEOUT = 30000;
             // Check if timeout has been reached
-            if (System.currentTimeMillis() - startTime >= this.TIMEOUT) {
+            if (System.currentTimeMillis() - startTime >= TIMEOUT) {
                 System.out.println("Connection timeout");
                 Server.request(clientSocket, "END", "Connection terminated");
                 return;
@@ -436,33 +445,41 @@ public class Server {
             // Deal with waiting queue
             if (player != null) {
                 this.addPlayer(player);
-                if (this.mode == 1) {
-                    this.sortClients();
-                    this.resetTime();
+                if (mode == 1) {
+                    sortPlayers();
+                    resetTime();
                 }
             }
 
         } while (player == null);
-        updateServerGUI();
+        updateServerMenu();
     }
 
     /*
-     * Updates the server time and increases the time interval between players with different ranks
+     * Updates the server menu
      */
-    public void updateServerGUI() {
-        int total_games = ((ThreadPoolExecutor) threadPoolGame).getActiveCount();
-        this.waiting_queue_lock.lock();
-        String[] waiting_queue = new String[this.waiting_queue.size()];
-        for (int i = 0; i < this.waiting_queue.size() && i < 5; i++) {
-            waiting_queue[i] = this.waiting_queue.get(i).getUsername();
-        }
-        serverGUI.setQueue(String.valueOf(this.waiting_queue.size()), waiting_queue);
-        this.waiting_queue_lock.unlock();
-        serverGUI.setGames(String.valueOf(total_games));
+    public void updateServerMenu() {
+        int totalGames = ((ThreadPoolExecutor) threadPoolGame).getActiveCount();
+        serverMenu.setGames(String.valueOf(totalGames));
 
-        this.database_lock.lock();
-        serverGUI.setLeaderboard(this.database.getLeaderboard(3));
-        this.database_lock.unlock();
+        waiting_queue_lock.lock();
+        try {
+            String[] waitingQueueUsernames = waiting_queue.stream()
+                    .limit(MAX_CONCURRENT_AUTH)
+                    .map(Player::getUsername)
+                    .toArray(String[]::new);
+            serverMenu.setQueue(String.valueOf(waiting_queue.size()), waitingQueueUsernames);
+        } finally {
+            waiting_queue_lock.unlock();
+        }
+
+        database_lock.lock();
+        try {
+            // Update the leaderboard to display the top 3 players
+            serverMenu.setLeaderboard(database.getLeaderboard(3));
+        } finally {
+            database_lock.unlock();
+        }
     }
 
     public static void main(String[] args) {

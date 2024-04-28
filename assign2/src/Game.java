@@ -1,4 +1,4 @@
-import java.nio.channels.SocketChannel;
+import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -9,9 +9,8 @@ public class Game implements Runnable {
     private final ReentrantLock database_lock;
     private final List<Player> waiting_queue;
     private final ReentrantLock waiting_queue_lock;
-    private final int ROUNDS = 4;
 
-    private List<Question> questions;
+    private final List<Question> questions;
 
     private int[] scores;
 
@@ -34,9 +33,9 @@ public class Game implements Runnable {
     public void run() {
         try {
             System.out.println("Starting quiz with " + this.players.size() + " players");
-            String winner = this.rounds();
+            String winner = this.playGameRounds();
             System.out.println("Quiz finished. Winner: " + winner);
-            this.askPlayAgain(winner);
+            this.handlePostGame(winner);
         } catch (Exception exception) {
             System.out.println("Exception occurred during game. Connection closed. : " + exception.getMessage());
             this.notifyPlayers("END", "Exception occurred during game. Connection closed.", null);
@@ -50,26 +49,35 @@ public class Game implements Runnable {
      *
      * @param winner The winner of the game
      */
-    private void askPlayAgain(String winner) throws Exception {
+    private void handlePostGame(String winner) throws Exception {
         for (Player player : this.players) {
-
             Server.request(player.getSocket(), "GAMEOVER", winner);
-            String answer = Connection.receive(player.getSocket());
+            String response = Connection.receive(player.getSocket());
 
-            // Wants to play more: is placed in the waiting queue
-            if (answer.equals("Y")) {
+            if (response.equals("Y")) {
                 addPlayerToQueue(player);
-
-                // Don't want to play again: session token is invalidated and connection is closed
             } else {
-                Server.request(player.getSocket(), "END", "Connection closed");
-                this.database_lock.lock();
-                this.database.invalidateToken(player);
-                this.database.backup();
-                this.database_lock.unlock();
-                player.getSocket().close();
+                endConnection(player);
             }
         }
+    }
+
+    /*
+     * End the connection with the player.
+     * The player's session token is invalidated and the connection is closed.
+     *
+     * @param player The player to end the connection with
+     */
+    private void endConnection(Player player) throws Exception {
+        Server.request(player.getSocket(), "END", "Connection closed");
+        this.database_lock.lock();
+        try {
+            this.database.invalidateToken(player);
+            this.database.backup();
+        } finally {
+            this.database_lock.unlock();
+        }
+        player.getSocket().close();
     }
 
     /*
@@ -109,60 +117,61 @@ public class Game implements Runnable {
      * The game is made of at least 2 players.
      * Each user will throw the dices simultaneously.
      * The server will give the result of the throw to each user.
-     * Wins the player that has the biggest score after N rounds.
+     * Wins the player that has the biggest score after N playGameRounds.
      * If there's a tie, the players will divide between themselves the gained elo.
      */
-    private String rounds() throws Exception {
+    private String playGameRounds() throws Exception {
+        notifyPlayers("INFO", "Game Started", null);
 
-        // Game started
-        this.notifyPlayers("INFO", "Game Started", null);
-
-        if(this.players.size() < 2) {
-            this.notifyPlayers("END", "Not enough players to start the game", null);
+        if(players.size() < 2) {
+            notifyPlayers("END", "Not enough players to start the game", null);
             return "Not enough players to start the game";
         }
 
-        // Game rounds loop
-        String answer;
-        for (int round = 0 ; round < this.ROUNDS ; round++) {
-            for (Player player : this.players) {
+        int ROUNDS = 4; // number of rounds in the game
+        for (int round = 0; round < ROUNDS; round++) {
+            for (Player player : players) {
                 printCurrentScores();
                 printQuestion(player, round);
-                this.notifyPlayers("INFO", "It's " + player.getUsername() + " turn to answer the question", player);
-                Server.request(player.getSocket(), "TURN", "Your turn to answer the question. Choose a letter between A and D.");
-                answer = Connection.receive(player.getSocket());
-                System.out.println("Player " + player.getUsername() + " answered: " + answer + " in round " + round + " - " + this.questions.get(round).getAnswer());
-                // update scores
-                if (answer.equals(this.questions.get(round).getAnswer())) {
-                    this.scores[this.players.indexOf(player)] += 1;
+                notifyPlayers("INFO", "It's " + player.getUsername() + "'s turn", player);
+                Server.request(player.getSocket(), "TURN", "Your turn to answer. Choose a letter between A and D.");
+                String answer = Connection.receive(player.getSocket());
+                System.out.println("Player " + player.getUsername() + " answered: " + answer + " in round " + round);
+                if (answer.equals(questions.get(round).getAnswer())) {
+                    scores[players.indexOf(player)]++;
                 }
             }
         }
 
+        return determineWinner();
+    }
+
+    private String determineWinner() throws Exception {
         String winner = "";
         int winnerScore = 0;
 
-        // Sending results
-        for (Player player : this.players) {
-            this.notifyPlayers("INFO", "Player " + player.getUsername() + " has " + this.scores[this.players.indexOf(player)] + " points", null);
-
-            // Update the player's rank
-            player.incrementRank(this.scores[this.players.indexOf(player)]);
-
-            // Update the database
-            this.database_lock.lock();
-            this.database.updateRank(player, this.scores[this.players.indexOf(player)]);
-            this.database.backup();
-            this.database_lock.unlock();
-
-            // Check for the winner
-            if (this.scores[this.players.indexOf(player)] > winnerScore) {
-                winner = player.getUsername() + " won with " + this.scores[this.players.indexOf(player)] + " points!";
-                winnerScore = this.scores[this.players.indexOf(player)];
+        for (Player player : players) {
+            notifyPlayers("INFO", "Player " + player.getUsername() + " has " + scores[players.indexOf(player)] + " points", null);
+            player.incrementRank(scores[players.indexOf(player)]);
+            updateDatabaseRank(player);
+            if (scores[players.indexOf(player)] > winnerScore) {
+                winner = player.getUsername() + " won with " + scores[players.indexOf(player)] + " points!";
+                winnerScore = scores[players.indexOf(player)];
             }
         }
 
         return winner;
+    }
+
+    /*
+     * Update the player's rank in the database.
+     * @param player The player to update the rank
+     */
+    private void updateDatabaseRank(Player player) throws Exception {
+        this.database_lock.lock();
+        this.database.updateRank(player, this.scores[this.players.indexOf(player)]);
+        this.database.backup();
+        this.database_lock.unlock();
     }
 
     /*
@@ -197,12 +206,15 @@ public class Game implements Runnable {
      * @param excluded The player that will not receive the message
      */
     private void notifyPlayers(String messageType, String message, Player excluded) {
+        this.players.stream()
+                .filter(player -> excluded == null || !player.equals(excluded))
+                .forEach(player -> sendPlayerMessage(player, messageType, message));
+    }
+
+    private void sendPlayerMessage(Player player, String messageType, String message) {
         try {
-            for (Player player : this.players) {
-                if (excluded != null && player.equals(excluded)) continue;
-                Server.request(player.getSocket(), messageType, message);
-                Connection.receive(player.getSocket());
-            }
+            Server.request(player.getSocket(), messageType, message);
+            Connection.receive(player.getSocket());
         } catch (Exception exception) {
             System.out.println("Exception: " + exception.getMessage());
         }

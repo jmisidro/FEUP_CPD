@@ -10,7 +10,7 @@ public class Game implements Runnable {
     private final List<Player> waiting_queue;
     private final ReentrantLock waiting_queue_lock;
 
-    private static final int ROUNDS = 4;
+    private static final int ROUNDS = 1;
     private final List<Question> questions;
 
     private int[] scores;
@@ -138,7 +138,6 @@ public class Game implements Runnable {
 
         for (int round = 0; round < ROUNDS; round++) {
             for (Player player : players) {
-                printCurrentScores();
                 printQuestion(player, round);
                 notifyPlayers("INFO", "It's " + player.getUsername() + "'s turn", player);
                 Server.request(player.getSocket(), "TURN", "Your turn to answer. Choose a letter between A and D.");
@@ -147,6 +146,7 @@ public class Game implements Runnable {
                 if (answer.equals(questions.get(round).getAnswer())) {
                     scores[players.indexOf(player)]++;
                 }
+                printCurrentScores();
             }
         }
 
@@ -163,7 +163,6 @@ public class Game implements Runnable {
         int winnerScore = 0;
 
         for (Player player : players) {
-            notifyPlayers("INFO", "Player " + player.getUsername() + " has " + scores[players.indexOf(player)] + " points", null);
             player.incrementRank(scores[players.indexOf(player)]);
             updateDatabaseRank(player);
             if (scores[players.indexOf(player)] > winnerScore) {
@@ -193,7 +192,7 @@ public class Game implements Runnable {
      */
     private void printQuestion(Player player, int round) throws Exception {
         Question question = questions.get(round);
-        String questionText = "Round: " + (round + 1) + "\n" +
+        String questionText = "Round: " + (round + 1) + "/" + ROUNDS + "\n" +
                 "Question: " + question.getQuestionText() + "\n" +
                 "Options: " + question.getOptions() + "\n";
         Server.request(player.getSocket(), "QUESTION", questionText);

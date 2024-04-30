@@ -123,6 +123,7 @@ public class Connection {
         String requestType;
         boolean takenUsername = false;
         boolean invalidCredentials = false;
+        boolean invalidToken = false;
 
         do {
             serverAnswer = Connection.receive(socket).split("\n");
@@ -132,7 +133,7 @@ public class Connection {
                 case "OPT" -> { // Option request
                     String menu = String.join("\n", Arrays.copyOfRange(serverAnswer, 1, serverAnswer.length));
                     System.out.println(menu);
-                    Connection.send(socket, mainMenuMENU());
+                    Connection.send(socket, mainMenuMenu());
                 }
                 case "USR" -> { // Data request: username or password
 
@@ -164,15 +165,14 @@ public class Connection {
                     System.out.println("Token file name: ");
                     String token;
 
-                    boolean invalidToken = false;
-
                     do {
-                        token = this.getTokenFromMENU(invalidToken);
+                        token = this.getTokenFromMenu(invalidToken);
                         invalidToken = token == null;
                     } while (token == null);
 
                     System.out.println("Token: " + token);
-                    Connection.send(socket, token == null ? "invalid" : token);
+                    System.out.println("Sending token to server...");
+                    Connection.send(socket, token);
                 }
                 case "NACK" -> { // Handle an error in authentication
                     System.out.println(serverAnswer[1]);
@@ -182,8 +182,12 @@ public class Connection {
                     } else if(serverAnswer[1].equals("Wrong username or password")) {
                         invalidCredentials = true;
                     }
+                    else if (serverAnswer[1].startsWith("Invalid session token")) {
+                        invalidToken = true;
+                    }
 
-                    // If we receive an error authenticating, we will try again the same option chosen before, unless it wasn't chosen yet
+
+                    // If we receive an error authenticating, we will try again the same option chosen before, unless it wasn't chosen, yet
                     // We first need to send the dummy "ACK" to the server, so it can send us the option request again
                     Connection.send(socket, "ACK");
 
@@ -239,13 +243,13 @@ public class Connection {
             switch (requestType) {
                 case "QUEUE" -> {
                     Connection.send(socket, "ACK");
-                    queueMENU(serverAnswer[1]);
+                    queueMenu(serverAnswer[1]);
                 }
                 case "END" -> {
                     Connection.send(socket, "ACK");
                 }
                 case "INFO", "QUESTION", "SCORE" -> { // Player turn. Let's send something to server.
-                    gameMENU(serverAnswer, requestType);
+                    gameMenu(serverAnswer, requestType);
                     Connection.send(socket, "ACK");
                 }
                 case "TURN" -> {
@@ -265,11 +269,11 @@ public class Connection {
 
     }
 
-    public void initMENU() {
+    public void initMenu() {
         this.playerMenu = new PlayerMenu(15000);
     }
 
-    public String mainMenuMENU() {
+    public String mainMenuMenu() {
         authenticationOption = Integer.parseInt(this.playerMenu.mainMenu());
         return Integer.toString(authenticationOption);
     }
@@ -278,7 +282,7 @@ public class Connection {
         return this.playerMenu.loginAndRegister(invalidCredentials, takenUsername);
     }
 
-    public String getTokenFromMENU(boolean invalidToken) {
+    public String getTokenFromMenu(boolean invalidToken) {
         String[] result = this.playerMenu.restore(invalidToken);
 
         if(result[1].equals("BACK"))
@@ -287,19 +291,19 @@ public class Connection {
             return readToken(result[0]);
     }
 
-    public void queueMENU(String serverMessage) {
+    public void queueMenu(String serverMessage) {
         this.playerMenu.queue(serverMessage);
     }
 
-    public void gameMENU(String[] serverMessages, String requestType) {
+    public void gameMenu(String[] serverMessages, String requestType) {
         switch (requestType) {
-            case "INFO" -> this.playerMenu.info();
+            case "INFO" -> this.playerMenu.info(serverMessages);
             case "QUESTION" -> this.playerMenu.updateQuestion(serverMessages);
             case "SCORE" -> this.playerMenu.updateScore(serverMessages);
         }
     }
 
-    public void closeMENU() {
+    public void closeMenu() {
         if (this.playerMenu != null) this.playerMenu.close();
     }
 
@@ -319,7 +323,7 @@ public class Connection {
             String host = args.length == 2 ? args[1] : Connection.DEFAULT_HOST;
             connection = new Connection(port, host);
             connection.start();
-            connection.initMENU();
+            connection.initMenu();
 
             // Start the connection and authenticate
             if (connection.authenticate())
@@ -327,7 +331,7 @@ public class Connection {
             else
                 connection.stop();
 
-            connection.closeMENU();
+            connection.closeMenu();
 
         } catch (UnknownHostException exception) {
             System.out.println("Host not found: " + exception.getMessage());
@@ -339,7 +343,7 @@ public class Connection {
             if (connection != null) {
                 try {
                     connection.stop();
-                    connection.closeMENU();
+                    connection.closeMenu();
                 } catch (IOException e) {
                     System.err.println("Error closing connection: " + e.getMessage());
                 }

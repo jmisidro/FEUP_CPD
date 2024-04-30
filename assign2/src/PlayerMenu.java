@@ -9,10 +9,12 @@ public class PlayerMenu {
     private final JLabel timeLabel = new JLabel();
     private int currentTime = 0;
     private int currentRoundTime = 0;
-    JLabel roundLabel = new JLabel("");
-    JLabel questionLabel = new JLabel("Question");
-    JLabel roundTimeLabel = new JLabel();
 
+    private final JLabel title = new JLabel("Pop Quiz");
+    private JLabel roundLabel = new JLabel("");
+    private JLabel questionLabel = new JLabel("Question");
+    private  JLabel roundTimeLabel = new JLabel();
+    private JLabel currentPlayerLabel = new JLabel();
     private int timeout;
 
     //Timer that fires every 1 second
@@ -20,14 +22,16 @@ public class PlayerMenu {
         currentTime++;
         timeLabel.setText("Time: " + currentTime + "s");
         currentRoundTime++;
-        roundTimeLabel.setText("Time: " + (int) (timeout * 0.001 - currentRoundTime) + "s");
+        int roundTime = (int) (timeout * 0.001 - currentRoundTime);
+        roundTime = roundTime < 0 ? (int) (timeout * 0.001) : roundTime;
+        roundTimeLabel.setText("Time: " + roundTime + "s");
     });
 
-    String[] options = {"Option 1", "Option 2", "Option 3", "Option 4"};
+    private String[] options = new String[4];
 
     // Colors for the GUI
-    Color bg_color = new Color(10, 4, 41);
-    Color card_color = new Color(28, 21, 61);
+    private Color bg_color = new Color(10, 4, 41);
+    private Color card_color = new Color(28, 21, 61);
 
     public PlayerMenu(int timeoutTime) {
 
@@ -39,14 +43,19 @@ public class PlayerMenu {
         f.setLayout(null);
         f.setVisible(true);
 
+        title.setBounds(200, 25, 200, 50);
+        title.setFont(new Font("Arial", Font.BOLD, 42));
+        title.setForeground(Color.WHITE);
         roundLabel.setForeground(Color.WHITE);
         roundLabel.setBounds(50, 50, 100, 30);
         questionLabel.setForeground(Color.WHITE);
-        questionLabel.setBounds(50, 100, 300, 30);
+        questionLabel.setBounds(50, 100, 450, 30);
         roundTimeLabel.setForeground(Color.WHITE);
         roundTimeLabel.setBounds(450, 50, 100, 30);
         timeLabel.setForeground(Color.WHITE);
         timeLabel.setBounds(450, 50, 100, 30);
+        currentPlayerLabel.setForeground(Color.WHITE);
+        currentPlayerLabel.setBounds(150, 50, 200, 30);
 
         timeout = timeoutTime;
 
@@ -77,10 +86,6 @@ public class PlayerMenu {
         clearInterface();
 
         // Game Title
-        JLabel title = new JLabel("Pop Quiz");
-        title.setBounds(125, 25, 200, 50);
-        title.setFont(new Font("Arial", Font.BOLD, 32));
-        title.setForeground(Color.WHITE);
         f.add(title);
 
         String [] buttons = {"Login", "Register", "Restore Connection", "Quit"};
@@ -89,7 +94,7 @@ public class PlayerMenu {
 
         for (int i = 0; i < 4; i++) {
             JButton b = new JButton(buttons[i]);
-            b.setBounds(100,100+50*i,200, 40);
+            b.setBounds(200,100+50*i,200, 40);
             int finalI = i;
             b.addActionListener(e -> {
                 result[0] = Integer.toString(finalI + 1);
@@ -128,11 +133,11 @@ public class PlayerMenu {
         final String[] result = new String[3];
         CountDownLatch latch = new CountDownLatch(1);
 
-        usernameLabel.setBounds(75, 50, 100, 30);
-        usernameField.setBounds(175, 50, 150, 30);
-        passwordLabel.setBounds(75, 100, 100, 30);
-        passwordField.setBounds(175, 100, 150, 30);
-        submitButton.setBounds(200, 150, 100, 30);
+        usernameLabel.setBounds(100, 100, 100, 30);
+        usernameField.setBounds(200, 100, 200, 30);
+        passwordLabel.setBounds(100, 150, 100, 30);
+        passwordField.setBounds(200, 150, 200, 30);
+        submitButton.setBounds(300, 250, 100, 30);
 
         submitButton.addActionListener(e -> {
             result[0] = usernameField.getText();
@@ -141,6 +146,7 @@ public class PlayerMenu {
             latch.countDown();
         });
 
+        f.add(title);
         f.add(usernameLabel);
         f.add(usernameField);
         f.add(passwordLabel);
@@ -148,7 +154,7 @@ public class PlayerMenu {
         f.add(submitButton);
 
         JButton backButton = new JButton("Back");
-        backButton.setBounds(100, 150, 100, 30);
+        backButton.setBounds(200, 250, 100, 30);
         f.add(backButton);
         backButton.addActionListener(e -> {
             result[0] = "BACK";
@@ -159,13 +165,13 @@ public class PlayerMenu {
 
         if (invalidCredentials) {
             JLabel errorLabel = new JLabel("Invalid username or password");
-            errorLabel.setBounds(50, 200, 200, 30);
+            errorLabel.setBounds(200, 200, 200, 30);
             errorLabel.setForeground(Color.RED);
             f.add(errorLabel);
         }
         else if(takenUsername) {
             JLabel errorLabel = new JLabel("Username already taken");
-            errorLabel.setBounds(50, 200, 200, 30);
+            errorLabel.setBounds(200, 200, 200, 30);
             errorLabel.setForeground(Color.RED);
             f.add(errorLabel);
         }
@@ -189,6 +195,9 @@ public class PlayerMenu {
     public String[] restore(boolean invalidToken) {
         clearInterface();
 
+        // Game Title
+        f.add(title);
+
         JLabel tokenLabel = new JLabel("Token file name:");
         tokenLabel.setForeground(Color.WHITE);
         JTextField tokenField = new JTextField(10);
@@ -197,9 +206,9 @@ public class PlayerMenu {
         final String[] result = new String[2];
         CountDownLatch latch = new CountDownLatch(1);
 
-        tokenLabel.setBounds(100, 65, 150, 30);
-        tokenField.setBounds(125, 100, 150, 30);
-        submitButton.setBounds(200, 150, 100, 30);
+        tokenLabel.setBounds(90, 100, 150, 30);
+        tokenField.setBounds(200, 100, 200, 30);
+        submitButton.setBounds(300, 200, 100, 30);
 
         submitButton.addActionListener(e -> {
             result[0] = tokenField.getText();
@@ -212,7 +221,7 @@ public class PlayerMenu {
         f.add(submitButton);
 
         JButton backButton = new JButton("Back");
-        backButton.setBounds(100, 150, 100, 30);
+        backButton.setBounds(200, 200, 100, 30);
         f.add(backButton);
         backButton.addActionListener(e -> {
             result[0] = "";
@@ -222,7 +231,7 @@ public class PlayerMenu {
 
         if (invalidToken) {
             JLabel errorLabel = new JLabel("Invalid token");
-            errorLabel.setBounds(25, 100, 100, 30);
+            errorLabel.setBounds(250, 150, 100, 30);
             errorLabel.setForeground(Color.RED);
             f.add(errorLabel);
         }
@@ -255,7 +264,7 @@ public class PlayerMenu {
         serverMessageLabel.setForeground(Color.WHITE);
 
         queueLabel.setBounds(150, 50, 200, 30);
-        serverMessageLabel.setBounds(50, 150, 400, 30);
+        serverMessageLabel.setBounds(100, 150, 400, 30);
 
         f.add(queueLabel);
         f.add(timeLabel);
@@ -275,7 +284,7 @@ public class PlayerMenu {
 
         CountDownLatch latch = new CountDownLatch(1);
 
-        // Create a timer that fires once after 30 seconds
+        // Create a timer that fires once after 15 seconds
         Timer timer = new Timer(timeout, e -> {
             latch.countDown();
         });
@@ -298,13 +307,12 @@ public class PlayerMenu {
         // create labels for options
         for (int i = 0; i < options.length; i++) {
             JButton optionButton = new JButton(options[i]);
-            optionButton.setBounds(50, 150 + 50 * i, 250, 30);
+            optionButton.setBounds(100, 150 + 50 * i, 250, 30);
             int finalI = i;
             optionButton.addActionListener(e -> {
                 // return the answer A - D
                 answer[0] = Character.toString((char) (finalI + 65));
                 optionButton.setEnabled(false);
-                optionButton.setBackground(Color.GREEN);
                 latch.countDown();
             });
             f.add(optionButton);
@@ -357,14 +365,36 @@ public class PlayerMenu {
     public void updateScore(String[] serverMessages) {
         System.out.println("Updating score...");
         System.out.println(Arrays.toString(serverMessages));
-        //updateScoreValues(serverMessages[1]);
+
+        // Example: [SCORE, zemiguel Score: 3, fabiorocha Score: 1]
+        // Ignore first message (SCORE)
+        // Separate the scores of the players
+        serverMessages = Arrays.copyOfRange(serverMessages, 1, serverMessages.length);
+        String message = Arrays.toString(serverMessages);
+        String[] scores = message
+                .replace("[", "")
+                .replace("]", "")
+                .split(", ");
+
+        clearInterface();
+
+        f.add(roundLabel);
+        f.add(currentPlayerLabel);
+
+        String [] players = new String[scores.length];
+        for (int i = 0; i < scores.length; i++) {
+            players[i] = "Player " + scores[i]  + " points";
+            JLabel playerLabel = new JLabel(players[i]);
+            playerLabel.setForeground(Color.WHITE);
+            playerLabel.setBounds(100, 150 + 50 * i, 250, 30);
+            f.add(playerLabel);
+        }
+
+        paintInterface();
     }
 
-
-    public void info() {
-        clearInterface();
-        f.add(roundLabel);
-        paintInterface();
+    public void info(String[] serverMessages) {
+        currentPlayerLabel.setText(serverMessages[1]);
     }
 
     /*
@@ -375,6 +405,8 @@ public class PlayerMenu {
         clearInterface();
 
         System.out.println("Game over " + serverMessage);
+
+        f.add(title);
 
         JLabel gameOverLabel = new JLabel("Game over!");
         gameOverLabel.setForeground(Color.WHITE);
@@ -387,12 +419,14 @@ public class PlayerMenu {
 
         CountDownLatch latch = new CountDownLatch(1);
 
-        gameOverLabel.setBounds(150, 50, 200, 30);
-        winnerLabel.setBounds(150, 100, 200, 30);
-        playAgainButton.setBounds(150, 150, 100, 30);
-        quitButton.setBounds(150, 200, 100, 30);
+        gameOverLabel.setBounds(225, 100, 200, 30);
+        gameOverLabel.setFont(new Font("Arial", Font.BOLD, 24));
+        gameOverLabel.setForeground(Color.CYAN);
+        winnerLabel.setBounds(200, 150, 200, 30);
+        playAgainButton.setBounds(175, 200, 100, 30);
+        quitButton.setBounds(325, 200, 100, 30);
 
-        // Create a timer that fires once after 30 seconds
+        // Create a timer that fires once after 15 seconds
         Timer timer = new Timer(timeout, e -> {
             result[0] = "N";
             latch.countDown();

@@ -38,6 +38,17 @@ public class Utils {
         return questions;
     }
 
+    public static List<Question> getRandomQuestions(int n) {
+        List<Question> questions = parseQuestions();
+        List<Question> randomQuestions = new ArrayList<>();
+        for (int i = 0; i < n; i++) {
+            int randomIndex = (int) (Math.random() * questions.size());
+            randomQuestions.add(questions.get(randomIndex));
+            questions.remove(randomIndex);
+        }
+        return randomQuestions;
+    }
+
     public static void main(String[] args) {
         List<Question> questions = Utils.parseQuestions();
         for (Question question : questions) {

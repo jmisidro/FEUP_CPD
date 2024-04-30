@@ -49,6 +49,56 @@
         "question": "What is the capital of Japan?",
         "options": ["Tokyo", "Beijing", "Seoul", "Bangkok"],
         "answer": "A"
+      },
+      {
+        "question": "What is the capital of Canada?",
+        "options": ["Toronto", "Vancouver", "Ottawa", "Montreal"],
+        "answer": "C"
+      },
+      {
+        "question": "What is the square root of 81?",
+        "options": ["7", "8", "9", "10"],
+        "answer": "C"
+      },
+      {
+        "question": "Who wrote 'To Kill a Mockingbird'?",
+        "options": ["Harper Lee", "Mark Twain", "Ernest Hemingway", "F. Scott Fitzgerald"],
+        "answer": "A"
+      },
+      {
+        "question": "What is the smallest planet in our solar system?",
+        "options": ["Mercury", "Venus", "Earth", "Mars"],
+        "answer": "A"
+      },
+      {
+        "question": "Which of the following is not a mammal?",
+        "options": ["Dog", "Cat", "Elephant", "Eagle"],
+        "answer": "D"
+      },
+      {
+        "question": "What is the largest mammal in the world?",
+        "options": ["Elephant", "Blue whale", "Giraffe", "Hippopotamus"],
+        "answer": "B"
+      },
+      {
+        "question": "What is the capital of Australia?",
+        "options": ["Sydney", "Melbourne", "Canberra", "Brisbane"],
+        "answer": "C"
+      },
+      {
+        "question": "What is the chemical symbol for gold?",
+        "options": ["Au", "Ag", "Cu", "Fe"],
+        "answer": "A"
+      },
+      {
+        "question": "Who painted the Sistine Chapel ceiling?",
+        "options": ["Leonardo da Vinci", "Michelangelo", "Raphael", "Donatello"],
+        "answer": "B"
+      },
+      {
+        "question": "What is the largest ocean on Earth?",
+        "options": ["Atlantic Ocean", "Indian Ocean", "Arctic Ocean", "Pacific Ocean"],
+        "answer": "D"
       }
     ]
   }

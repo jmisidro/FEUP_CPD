@@ -10,6 +10,7 @@ public class Game implements Runnable {
     private final List<Player> waiting_queue;
     private final ReentrantLock waiting_queue_lock;
 
+    private static final int ROUNDS = 4;
     private final List<Question> questions;
 
     private int[] scores;
@@ -22,7 +23,7 @@ public class Game implements Runnable {
         this.database_lock = database_lock;
         this.waiting_queue = waiting_queue;
         this.waiting_queue_lock = waiting_queue_lock;
-        this.questions = Utils.parseQuestions();
+        this.questions = Utils.getRandomQuestions(ROUNDS);
         this.scores = new int[this.players.size()];
         // initialize scores
         for (int i = 0 ; i < this.players.size() ; i++) {
@@ -135,7 +136,6 @@ public class Game implements Runnable {
             return "Not enough players to start the game";
         }
 
-        int ROUNDS = 4; // number of rounds in the game
         for (int round = 0; round < ROUNDS; round++) {
             for (Player player : players) {
                 printCurrentScores();
@@ -192,7 +192,7 @@ public class Game implements Runnable {
      * @param round The round of the game
      */
     private void printQuestion(Player player, int round) throws Exception {
-        Question question = this.questions.get(round);
+        Question question = questions.get(round);
         String questionText = "Round: " + (round + 1) + "\n" +
                 "Question: " + question.getQuestionText() + "\n" +
                 "Options: " + question.getOptions() + "\n";

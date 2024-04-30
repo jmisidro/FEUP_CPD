@@ -7,7 +7,6 @@ public class Player {
     private final String token;
     private Long rank;
     private SocketChannel socket;
-    private int timeInQueue = 0;
 
     Player(String username, String password, String token, Long rank, SocketChannel socket) {
         this.username = username;

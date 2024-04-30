@@ -8,17 +8,20 @@ public class PlayerMenu {
     private final JFrame f;
     private final JLabel timeLabel = new JLabel();
     private int currentTime = 0;
+    private int currentRoundTime = 0;
+    JLabel roundLabel = new JLabel("");
+    JLabel questionLabel = new JLabel("Question");
+    JLabel roundTimeLabel = new JLabel();
+
+    private int timeout;
 
     //Timer that fires every 1 second
     private final Timer timer = new Timer(1000, e -> {
         currentTime++;
         timeLabel.setText("Time: " + currentTime + "s");
+        currentRoundTime++;
+        roundTimeLabel.setText("Time: " + (int) (timeout * 0.001 - currentRoundTime) + "s");
     });
-
-    private final int timeout;
-
-    JLabel roundLabel = new JLabel("");
-    JLabel questionLabel = new JLabel("Question");
 
     String[] options = {"Option 1", "Option 2", "Option 3", "Option 4"};
 
@@ -31,7 +34,7 @@ public class PlayerMenu {
         f = new JFrame("Pop Quiz Game");
         f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-        f.setSize(400, 400);
+        f.setSize(600, 400);
         f.getContentPane().setBackground(bg_color);
         f.setLayout(null);
         f.setVisible(true);
@@ -40,24 +43,38 @@ public class PlayerMenu {
         roundLabel.setBounds(50, 50, 100, 30);
         questionLabel.setForeground(Color.WHITE);
         questionLabel.setBounds(50, 100, 300, 30);
+        roundTimeLabel.setForeground(Color.WHITE);
+        roundTimeLabel.setBounds(450, 50, 100, 30);
+        timeLabel.setForeground(Color.WHITE);
+        timeLabel.setBounds(450, 50, 100, 30);
 
-        this.timeout = timeoutTime;
+        timeout = timeoutTime;
 
         timer.start();
     }
 
+    /*
+     * Clear the GUI.
+     */
     private void clearInterface() {
         f.getContentPane().removeAll();
         paintInterface();
     }
 
+    /*
+     * Paint the GUI.
+     */
     private void paintInterface() {
         f.revalidate();
         f.repaint();
     }
 
+    /*
+     * Display the main menu in the GUI.
+     * @return The option chosen by the player
+     */
     public String mainMenu() {
-        this.clearInterface();
+        clearInterface();
 
         // Game Title
         JLabel title = new JLabel("Pop Quiz");
@@ -81,7 +98,7 @@ public class PlayerMenu {
             f.add(b);
         }
 
-        this.paintInterface();
+        paintInterface();
 
         try {
             latch.await();
@@ -92,8 +109,14 @@ public class PlayerMenu {
         return result[0];
     }
 
+    /*
+     * Display the login and register fields in the GUI.
+     * @param invalidCredentials Whether the credentials are invalid
+     * @param takenUsername Whether the username is already taken
+     * @return The username and password input by the player
+     */
     public String[] loginAndRegister(boolean invalidCredentials, boolean takenUsername) {
-        this.clearInterface();
+        clearInterface();
 
         JLabel usernameLabel = new JLabel("Username:");
         usernameLabel.setForeground(Color.WHITE);
@@ -147,7 +170,7 @@ public class PlayerMenu {
             f.add(errorLabel);
         }
 
-        this.paintInterface();
+        paintInterface();
 
         try {
             latch.await();
@@ -158,8 +181,13 @@ public class PlayerMenu {
         return result;
     }
 
+    /*
+     * Display the token file name input field in the GUI.
+     * @param invalidToken Whether the token is invalid
+     * @return The token file name input by the player
+     */
     public String[] restore(boolean invalidToken) {
-        this.clearInterface();
+        clearInterface();
 
         JLabel tokenLabel = new JLabel("Token file name:");
         tokenLabel.setForeground(Color.WHITE);
@@ -199,7 +227,7 @@ public class PlayerMenu {
             f.add(errorLabel);
         }
 
-        this.paintInterface();
+        paintInterface();
 
         try {
             latch.await();
@@ -210,9 +238,13 @@ public class PlayerMenu {
         return result;
     }
 
+    /*
+     * Display the waiting queue in the GUI.
+     * @param serverMessages The messages received from the server
+     */
     public void queue(String serverMessage) {
 
-        this.clearInterface();
+        clearInterface();
 
         currentTime = 0;
 
@@ -223,18 +255,23 @@ public class PlayerMenu {
         serverMessageLabel.setForeground(Color.WHITE);
 
         queueLabel.setBounds(150, 50, 200, 30);
-        timeLabel.setBounds(150, 100, 100, 30);
         serverMessageLabel.setBounds(50, 150, 400, 30);
 
         f.add(queueLabel);
         f.add(timeLabel);
         f.add(serverMessageLabel);
 
-        this.paintInterface();
+        paintInterface();
     }
 
+    /*
+     * Display the question and options to the player.
+     * The player has 15 seconds to answer the question.
+     * If the player doesn't answer in time, the answer is considered wrong.
+     * @return The answer chosen by the player
+     */
     public String turn() {
-        this.clearInterface();
+        clearInterface();
 
         CountDownLatch latch = new CountDownLatch(1);
 
@@ -242,21 +279,26 @@ public class PlayerMenu {
         Timer timer = new Timer(timeout, e -> {
             latch.countDown();
         });
+
         timer.setRepeats(false); // Make sure the timer only fires once
 
         // Start the timer
         timer.start();
 
+        // Reset Countdown timer
+        currentRoundTime = 0;
 
         f.add(roundLabel);
         f.add(questionLabel);
+        f.add(roundTimeLabel);
 
         String[] answer = new String[1];
+        answer[0] = "T"; // Default value --> (T)imeout
 
         // create labels for options
-        for (int i = 0; i < this.options.length; i++) {
-            JButton optionButton = new JButton(this.options[i]);
-            optionButton.setBounds(50, 150 + 50 * i, 100, 30);
+        for (int i = 0; i < options.length; i++) {
+            JButton optionButton = new JButton(options[i]);
+            optionButton.setBounds(50, 150 + 50 * i, 250, 30);
             int finalI = i;
             optionButton.addActionListener(e -> {
                 // return the answer A - D
@@ -268,8 +310,7 @@ public class PlayerMenu {
             f.add(optionButton);
         }
 
-
-        this.paintInterface();
+        paintInterface();
 
         try {
             latch.await();
@@ -278,11 +319,12 @@ public class PlayerMenu {
         }
 
         return answer[0];
-
     }
 
-
-
+    /*
+     * Update the question in the GUI.
+     * @param serverMessages The messages received from the server
+     */
     public void updateQuestion(String[] serverMessages) {
         System.out.println("Updating question...");
         System.out.println(Arrays.toString(serverMessages));
@@ -296,12 +338,22 @@ public class PlayerMenu {
         );
     }
 
+    /*
+     * Update the game values in the GUI.
+     * @param round The round of the game
+     * @param question The question to display
+     * @param options The options to display
+     */
     private void updateGameValues(String round, String question, String[] options) {
         roundLabel.setText(round);
         questionLabel.setText(question);
         this.options = options;
     }
 
+    /*
+     * Update the score in the GUI.
+     * @param serverMessages The messages received from the server
+     */
     public void updateScore(String[] serverMessages) {
         System.out.println("Updating score...");
         System.out.println(Arrays.toString(serverMessages));
@@ -310,16 +362,17 @@ public class PlayerMenu {
 
 
     public void info() {
-        this.clearInterface();
-
+        clearInterface();
         f.add(roundLabel);
-
-        this.paintInterface();
+        paintInterface();
     }
 
-
+    /*
+     * Display the winner of the game and ask the player if they want to play again.
+     * @param serverMessages The messages received from the server
+     */
     public String gameOver(String serverMessage) {
-        this.clearInterface();
+        clearInterface();
 
         System.out.println("Game over " + serverMessage);
 
@@ -371,7 +424,7 @@ public class PlayerMenu {
         f.add(playAgainButton);
         f.add(quitButton);
 
-        this.paintInterface();
+        paintInterface();
 
         try {
             latch.await();
@@ -382,6 +435,9 @@ public class PlayerMenu {
         return result[0];
     }
 
+    /*
+     * Close the GUI.
+     */
     public void close() {
         timer.stop();
         f.dispose();

@@ -125,14 +125,14 @@ public class Connection {
         boolean invalidCredentials = false;
 
         do {
-            serverAnswer = Connection.receive(this.socket).split("\n");
+            serverAnswer = Connection.receive(socket).split("\n");
             requestType = serverAnswer[0].toUpperCase();
 
             switch (requestType) {
                 case "OPT" -> { // Option request
                     String menu = String.join("\n", Arrays.copyOfRange(serverAnswer, 1, serverAnswer.length));
                     System.out.println(menu);
-                    Connection.send(this.socket, this.mainMenuGUI());
+                    Connection.send(socket, mainMenuMENU());
                 }
                 case "USR" -> { // Data request: username or password
 
@@ -144,18 +144,18 @@ public class Connection {
 
 
                     if (credentials[2].equals("BACK")) {
-                        Connection.send(this.socket, credentials[2]);
+                        Connection.send(socket, credentials[2]);
                         takenUsername = false;
                         invalidCredentials = false;
                     }
                     else {
-                        Connection.send(this.socket, credentials[0].toLowerCase());
+                        Connection.send(socket, credentials[0].toLowerCase());
 
-                        serverAnswer = Connection.receive(this.socket).split("\n");
+                        serverAnswer = Connection.receive(socket).split("\n");
                         requestType = serverAnswer[0].toUpperCase(); // It is going to be PSW
 
                         if (!requestType.equals("END")) {
-                            Connection.send(this.socket, credentials[1]);
+                            Connection.send(socket, credentials[1]);
                         }
                     }
                 }
@@ -167,12 +167,12 @@ public class Connection {
                     boolean invalidToken = false;
 
                     do {
-                        token = this.getTokenFromGUI(invalidToken);
+                        token = this.getTokenFromMENU(invalidToken);
                         invalidToken = token == null;
                     } while (token == null);
 
                     System.out.println("Token: " + token);
-                    Connection.send(this.socket, token == null ? "invalid" : token);
+                    Connection.send(socket, token == null ? "invalid" : token);
                 }
                 case "NACK" -> { // Handle an error in authentication
                     System.out.println(serverAnswer[1]);
@@ -185,19 +185,19 @@ public class Connection {
 
                     // If we receive an error authenticating, we will try again the same option chosen before, unless it wasn't chosen yet
                     // We first need to send the dummy "ACK" to the server, so it can send us the option request again
-                    Connection.send(this.socket, "ACK");
+                    Connection.send(socket, "ACK");
 
                     if (authenticationOption > 0) {
-                        serverAnswer = Connection.receive(this.socket).split("\n");
+                        serverAnswer = Connection.receive(socket).split("\n");
                         requestType = serverAnswer[0].toUpperCase();
 
                         // Retry connection option
-                        Connection.send(this.socket,Integer.toString(authenticationOption));
+                        Connection.send(socket,Integer.toString(authenticationOption));
                     }
                 }
                 case "AUTH" -> { // Authentication success. Receive session token value
                     System.out.println("Success. Session token was received.");
-                    Connection.send(this.socket, "ACK");
+                    Connection.send(socket, "ACK");
                     this.writeToken(serverAnswer[1], serverAnswer[2]);
                 }
                 case "END" -> System.out.println(serverAnswer[1]); // If the server brokes the connection
@@ -214,8 +214,8 @@ public class Connection {
         long lastTime = System.currentTimeMillis();
         long currentTime;
         Selector selector = Selector.open();
-        this.socket.configureBlocking(false);
-        this.socket.register(selector, SelectionKey.OP_READ);
+        socket.configureBlocking(false);
+        socket.register(selector, SelectionKey.OP_READ);
 
         do {
 
@@ -232,27 +232,27 @@ public class Connection {
                 selector.selectedKeys().clear();
             }
 
-            serverAnswer = Connection.receive(this.socket).split("\n");
+            serverAnswer = Connection.receive(socket).split("\n");
             requestType = serverAnswer[0].toUpperCase();
             System.out.println("REQUEST TYPE: " + Arrays.toString(serverAnswer));
 
             switch (requestType) {
                 case "QUEUE" -> {
-                    Connection.send(this.socket, "ACK");
-                    queueGUI(serverAnswer[1]);
+                    Connection.send(socket, "ACK");
+                    queueMENU(serverAnswer[1]);
                 }
                 case "END" -> {
-                    Connection.send(this.socket, "ACK");
+                    Connection.send(socket, "ACK");
                 }
                 case "INFO", "QUESTION", "SCORE" -> { // Player turn. Let's send something to server.
-                    gameGUI(serverAnswer, requestType);
-                    Connection.send(this.socket, "ACK");
+                    gameMENU(serverAnswer, requestType);
+                    Connection.send(socket, "ACK");
                 }
                 case "TURN" -> {
-                    Connection.send(this.socket, this.playerMenu.turn());
+                    Connection.send(socket, this.playerMenu.turn());
                 }
                 case "GAMEOVER" -> {
-                    Connection.send(this.socket, this.playerMenu.gameOver(serverAnswer[1]));
+                    Connection.send(socket, this.playerMenu.gameOver(serverAnswer[1]));
                 }
                 case "PING" -> {
                     ; // Doesn't expect an answer back
@@ -265,11 +265,11 @@ public class Connection {
 
     }
 
-    public void initGUI() {
-        this.playerMenu = new PlayerMenu(10000);
+    public void initMENU() {
+        this.playerMenu = new PlayerMenu(15000);
     }
 
-    public String mainMenuGUI() {
+    public String mainMenuMENU() {
         authenticationOption = Integer.parseInt(this.playerMenu.mainMenu());
         return Integer.toString(authenticationOption);
     }
@@ -278,7 +278,7 @@ public class Connection {
         return this.playerMenu.loginAndRegister(invalidCredentials, takenUsername);
     }
 
-    public String getTokenFromGUI(boolean invalidToken) {
+    public String getTokenFromMENU(boolean invalidToken) {
         String[] result = this.playerMenu.restore(invalidToken);
 
         if(result[1].equals("BACK"))
@@ -287,11 +287,11 @@ public class Connection {
             return readToken(result[0]);
     }
 
-    public void queueGUI(String serverMessage) {
+    public void queueMENU(String serverMessage) {
         this.playerMenu.queue(serverMessage);
     }
 
-    public void gameGUI(String[] serverMessages, String requestType) {
+    public void gameMENU(String[] serverMessages, String requestType) {
         switch (requestType) {
             case "INFO" -> this.playerMenu.info();
             case "QUESTION" -> this.playerMenu.updateQuestion(serverMessages);
@@ -299,7 +299,7 @@ public class Connection {
         }
     }
 
-    public void closeGUI() {
+    public void closeMENU() {
         if (this.playerMenu != null) this.playerMenu.close();
     }
 
@@ -319,7 +319,7 @@ public class Connection {
             String host = args.length == 2 ? args[1] : Connection.DEFAULT_HOST;
             connection = new Connection(port, host);
             connection.start();
-            connection.initGUI();
+            connection.initMENU();
 
             // Start the connection and authenticate
             if (connection.authenticate())
@@ -327,7 +327,7 @@ public class Connection {
             else
                 connection.stop();
 
-            connection.closeGUI();
+            connection.closeMENU();
 
         } catch (UnknownHostException exception) {
             System.out.println("Host not found: " + exception.getMessage());
@@ -339,7 +339,7 @@ public class Connection {
             if (connection != null) {
                 try {
                     connection.stop();
-                    connection.closeGUI();
+                    connection.closeMENU();
                 } catch (IOException e) {
                     System.err.println("Error closing connection: " + e.getMessage());
                 }

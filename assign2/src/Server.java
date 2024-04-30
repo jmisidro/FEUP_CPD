@@ -31,7 +31,7 @@ public class Server {
     // Database
     private Database database;
     private ReentrantLock database_lock;
-    private final String DATABASE_PATH = "assign2/server/";
+    private final String DATABASE_PATH = "assign2/src/server/";
 
     // Players
     private List<Player> waiting_queue;

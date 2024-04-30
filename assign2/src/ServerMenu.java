@@ -1,7 +1,7 @@
 import javax.swing.*;
 import java.awt.*;
 
-public class ServerGUI {
+public class ServerMenu {
 
     private final JFrame f;
     private final JLabel timeLabel = new JLabel();
@@ -20,7 +20,7 @@ public class ServerGUI {
         timeLabel.setText("Time: " + currentTime + "s");
     });
 
-    public ServerGUI() {
+    public ServerMenu() {
 
         f = new JFrame("Pop Quiz Server");
         f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);

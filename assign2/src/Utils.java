@@ -13,7 +13,7 @@ public class Utils {
 
         try {
             JSONParser parser = new JSONParser();
-            JSONObject rootObject = (JSONObject) parser.parse(new FileReader("assign2/server/questions.json"));
+            JSONObject rootObject = (JSONObject) parser.parse(new FileReader("assign2/src/server/questions.json"));
             JSONArray questionArray = (JSONArray) rootObject.get("questions");
 
             for (Object questionObj : questionArray) {

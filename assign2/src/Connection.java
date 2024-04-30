@@ -12,7 +12,7 @@ public class Connection {
     private final int port;                                 // The port number
     private final String host;                              // The host name or IP address
     private SocketChannel socket;                           // A SocketChannel for the connection
-    private final String TOKEN_PATH = "assign2/client/";     // A path to a directory containing tokens
+    private final String TOKEN_PATH = "assign2/src/client/";     // A path to a directory containing tokens
     private static final String DEFAULT_HOST = "localhost"; // A default host to use if none is provided
     private final long TIMEOUT = 30000;                     // Timeout to avoid slow clients in milliseconds
     private PlayerMenu playerMenu;                            // A GUI to display messages

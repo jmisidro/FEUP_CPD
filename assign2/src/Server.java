@@ -128,6 +128,13 @@ public class Server {
     }
 
     /*
+     * Schedule games by creating a new game with players from the waiting queue with similar rankings
+     */
+    private void scheduleRankedGame() {
+        // TODO: Implement scheduleRankedGame
+    }
+
+    /*
      * Handles the authentication of new clients
      */
     private void connectionAuthenticator() {

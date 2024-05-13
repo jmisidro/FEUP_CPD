@@ -422,7 +422,7 @@ public class PlayerMenu {
         gameOverLabel.setBounds(225, 100, 200, 30);
         gameOverLabel.setFont(new Font("Arial", Font.BOLD, 24));
         gameOverLabel.setForeground(Color.CYAN);
-        winnerLabel.setBounds(200, 150, 200, 30);
+        winnerLabel.setBounds(200, 150, 400, 30);
         playAgainButton.setBounds(175, 200, 100, 30);
         quitButton.setBounds(325, 200, 100, 30);
 

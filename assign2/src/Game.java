@@ -10,7 +10,7 @@ public class Game implements Runnable {
     private final List<Player> waiting_queue;
     private final ReentrantLock waiting_queue_lock;
 
-    private static final int ROUNDS = 1;
+    private static final int ROUNDS = 2;
     private final List<Question> questions;
 
     private int[] scores;
@@ -160,15 +160,30 @@ public class Game implements Runnable {
      */
     private String determineWinner() throws Exception {
         String winner = "";
-        int winnerScore = 0;
+        int maxScore = scores[0];
+        boolean tie = true;
 
         for (Player player : players) {
             player.incrementRank(scores[players.indexOf(player)]);
             updateDatabaseRank(player);
-            if (scores[players.indexOf(player)] > winnerScore) {
+            if (scores[players.indexOf(player)] > maxScore) {
+                tie = false;
                 winner = player.getUsername() + " won with " + scores[players.indexOf(player)] + " points!";
-                winnerScore = scores[players.indexOf(player)];
+                maxScore = scores[players.indexOf(player)];
             }
+        }
+
+        // If there's a tie, the players will divide between themselves the gained rank.
+        if (tie) {
+            StringBuilder tiedPlayers = new StringBuilder();
+            for (Player player : players) {
+                if (scores[players.indexOf(player)] == maxScore) {
+                    player.incrementRank(scores[players.indexOf(player)] / 2);
+                    updateDatabaseRank(player);
+                    tiedPlayers.append(player.getUsername()).append(" ");
+                }
+            }
+            winner = "It's a tie between " + tiedPlayers.toString() + "with " + maxScore + " points!";
         }
 
         return winner;

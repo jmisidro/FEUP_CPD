@@ -9,7 +9,7 @@ import java.util.List;
 
 public class Utils {
 
-    private static final String FILE_PATH = "assign2/src/server/";
+    private static final String FILE_PATH = "server/";
 
     /*
      * Parse the questions from the questions.json file inside FILE_PATH

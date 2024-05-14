@@ -1,28 +1,32 @@
-import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class Game implements Runnable {
 
+    // Players
     private final List<Player> players;
-    private final Database database;
-    private final ReentrantLock database_lock;
-    private final List<Player> waiting_queue;
-    private final ReentrantLock waiting_queue_lock;
 
+    // Database
+    private final Database database;
+    private final ReentrantLock databaseLock;
+
+    // Waiting Queue
+    private final List<Player> waitingQueue;
+    private final ReentrantLock waitingQueueLock;
+
+    // Questions and scores
     private static final int ROUNDS = 2;
     private final List<Question> questions;
-
     private int[] scores;
 
-    public Game(List<Player> players, Database database, ReentrantLock database_lock,
-                List<Player> waiting_queue,
-                ReentrantLock waiting_queue_lock) {
+    public Game(List<Player> players, Database database, ReentrantLock databaseLock,
+                List<Player> waitingQueue,
+                ReentrantLock waitingQueueLock) {
         this.players = players;
         this.database = database;
-        this.database_lock = database_lock;
-        this.waiting_queue = waiting_queue;
-        this.waiting_queue_lock = waiting_queue_lock;
+        this.databaseLock = databaseLock;
+        this.waitingQueue = waitingQueue;
+        this.waitingQueueLock = waitingQueueLock;
         this.questions = Utils.getRandomQuestions(ROUNDS);
         this.scores = new int[this.players.size()];
         // initialize scores
@@ -78,12 +82,12 @@ public class Game implements Runnable {
      */
     private void endConnection(Player player) throws Exception {
         Server.request(player.getSocket(), "END", "Connection closed");
-        this.database_lock.lock();
+        this.databaseLock.lock();
         try {
             this.database.invalidateToken(player);
             this.database.backup();
         } finally {
-            this.database_lock.unlock();
+            this.databaseLock.unlock();
         }
         player.getSocket().close();
     }
@@ -96,19 +100,19 @@ public class Game implements Runnable {
      * @param player The player to be added to the queue
      */
     private void addPlayerToQueue(Player player) {
-        this.waiting_queue_lock.lock();
+        this.waitingQueueLock.lock();
         try {
-            Player existingPlayer = this.waiting_queue.stream()
+            Player existingPlayer = this.waitingQueue.stream()
                     .filter(p -> p.equals(player))
                     .findFirst()
                     .orElse(null);
 
             if (existingPlayer != null) { // player already exists in the queue
                 existingPlayer.setSocket(player.getSocket());
-                System.out.println("Player " + player.getUsername() + " reconnected. Queue size: " + this.waiting_queue.size());
+                System.out.println("Player " + player.getUsername() + " reconnected. Queue size: " + this.waitingQueue.size());
             } else { // else, player is added to the queue
-                this.waiting_queue.add(player);
-                System.out.println("Player " + player.getUsername() + " is now in the waiting queue. Queue size: " + this.waiting_queue.size());
+                this.waitingQueue.add(player);
+                System.out.println("Player " + player.getUsername() + " is now in the waiting queue. Queue size: " + this.waitingQueue.size());
             }
 
             Server.request(player.getSocket(), "QUEUE", "You joined the waiting queue with ranking of  " + player.getRank() + " points.");
@@ -116,7 +120,7 @@ public class Game implements Runnable {
         } catch (Exception exception) {
             System.out.println("Error while adding player to the waiting queue. Info: " + exception.getMessage());
         } finally {
-            this.waiting_queue_lock.unlock();
+            this.waitingQueueLock.unlock();
         }
     }
 
@@ -194,10 +198,10 @@ public class Game implements Runnable {
      * @param player The player to update the rank
      */
     private void updateDatabaseRank(Player player) throws Exception {
-        this.database_lock.lock();
+        this.databaseLock.lock();
         this.database.updateRank(player, this.scores[this.players.indexOf(player)]);
         this.database.backup();
-        this.database_lock.unlock();
+        this.databaseLock.unlock();
     }
 
     /*

@@ -19,7 +19,7 @@ public class Connection {
     private int authenticationOption = 0;
 
     // Constants
-    private final String TOKEN_PATH = "assign2/src/player/";     // A path to a directory containing tokens
+    private final String TOKEN_PATH = "player/";     // A path to a directory containing tokens
     private static final String DEFAULT_HOST = "localhost"; // A default host to use if none is provided
     private final long TIMEOUT = 30000;                     // Timeout to avoid slow clients in milliseconds
 
@@ -111,7 +111,7 @@ public class Connection {
         try {
             BufferedReader reader = new BufferedReader(new FileReader(file)); // Create BufferedReader to read file
             String line;
-            while ((line = reader.readLine()) != null) {    // Read each line of the file
+            while ((line = reader.readLine()) != null) {  // Read each line of the file
                 fileContent.append(line);
             }
             reader.close(); // Close the BufferedReader
@@ -147,10 +147,10 @@ public class Connection {
     }
 
     /*
-     * Authenticate the connection
+     * Handle the authentication process with the server
      * @return True if the connection is authenticated, false otherwise
      */
-    public boolean authenticate() throws Exception {
+    public boolean handleAuthentication() throws Exception {
 
         String[] serverAnswer;
         String requestType;
@@ -163,13 +163,9 @@ public class Connection {
             requestType = serverAnswer[0].toUpperCase();
 
             switch (requestType) {
-                case "OPT" -> { // Option request
-                    String menu = String.join("\n", Arrays.copyOfRange(serverAnswer, 1, serverAnswer.length));
-                    System.out.println(menu);
-                    Connection.send(socket, mainMenuMenu());
-                }
+                case "OPT" -> // Option request
+                        Connection.send(socket, mainMenuMenu());
                 case "USR" -> { // Data request: username or password
-
                     String[] credentials;
 
                     do {
@@ -194,8 +190,6 @@ public class Connection {
                     }
                 }
                 case "TKN" -> { // Token request: session token value
-                    System.out.println(serverAnswer[1]);
-                    System.out.println("Token file name: ");
                     String token;
 
                     do {
@@ -219,15 +213,12 @@ public class Connection {
                         invalidToken = true;
                     }
 
-
-                    // If we receive an error authenticating, we will try again the same option chosen before, unless it wasn't chosen, yet
-                    // We first need to send the dummy "ACK" to the server, so it can send us the option request again
+                    // Retry connection option chosen beforehand (if any)
+                    // To do so, we first send a dummy "ACK" to the server,
+                    // so it can send us the option request again
                     Connection.send(socket, "ACK");
 
                     if (authenticationOption > 0) {
-                        serverAnswer = Connection.receive(socket).split("\n");
-                        requestType = serverAnswer[0].toUpperCase();
-
                         // Retry connection option
                         Connection.send(socket,Integer.toString(authenticationOption));
                     }
@@ -241,68 +232,64 @@ public class Connection {
                 default -> System.out.println("Unknown server request type :" + requestType);
             }
         } while (!requestType.equals("AUTH") && !requestType.equals("END"));
-        return requestType.equals("AUTH"); // Authentication success?
+        return requestType.equals("AUTH"); // Return true if the connection is authenticated
     }
 
     /*
-     * Listen for messages from the server
+     * Handle incoming server messages:
+     * - QUEUE: Display the queue menu
+     * - END: Close the connection
+     * - INFO: Display the game information
+     * - QUESTION: Update the question
+     * - SCORE: Update the score
+     * - TURN: Send the player's turn
+     * - GAMEOVER: Display the game over message
+     * - PING: Doesn't expect an answer back
      */
-    public void listening() throws Exception {
-
-        String[] serverAnswer;
-        String requestType = "";
-        long lastTime = System.currentTimeMillis();
-        long currentTime;
+    public void handleServerMessages() throws Exception {
         Selector selector = Selector.open();
         socket.configureBlocking(false);
         socket.register(selector, SelectionKey.OP_READ);
+        long lastTime = System.currentTimeMillis();
 
-        do {
-
-            int readyChannels = selector.select(TIMEOUT);
-            if (readyChannels == 0) {
-                currentTime = System.currentTimeMillis() - lastTime;
-                if(currentTime > TIMEOUT) {
-                    System.out.println("Server is not responding. Closing connection...");
-                    break;
-                }
-                continue;
-            } else {
-                lastTime = System.currentTimeMillis();
-                selector.selectedKeys().clear();
+        while (true) {
+            if (selector.select(TIMEOUT) == 0 && System.currentTimeMillis() - lastTime > TIMEOUT) {
+                System.out.println("Server is not responding. Closing connection...");
+                break;
             }
+            lastTime = System.currentTimeMillis();
+            selector.selectedKeys().clear();
 
-            serverAnswer = Connection.receive(socket).split("\n");
-            requestType = serverAnswer[0].toUpperCase();
-            System.out.println("REQUEST TYPE: " + Arrays.toString(serverAnswer));
+            String[] serverAnswer = Connection.receive(socket).split("\n");
+            String requestType = serverAnswer[0].toUpperCase();
 
             switch (requestType) {
-                case "QUEUE" -> {
+                case "QUEUE":
                     Connection.send(socket, "ACK");
                     queueMenu(serverAnswer[1]);
-                }
-                case "END" -> {
+                    break;
+                case "END":
                     Connection.send(socket, "ACK");
-                }
-                case "INFO", "QUESTION", "SCORE" -> { // Player turn. Let's send something to server.
+                    return;
+                case "INFO":
+                case "QUESTION":
+                case "SCORE":
                     gameMenu(serverAnswer, requestType);
                     Connection.send(socket, "ACK");
-                }
-                case "TURN" -> {
+                    break;
+                case "TURN":
                     Connection.send(socket, this.playerMenu.turn());
-                }
-                case "GAMEOVER" -> {
+                    break;
+                case "GAMEOVER":
                     Connection.send(socket, this.playerMenu.gameOver(serverAnswer[1]));
-                }
-                case "PING" -> {
-                    ; // Doesn't expect an answer back
-                }
-                default -> System.out.println("Unknown server request type");
+                    break;
+                case "PING":
+                    break;
+                default:
+                    System.out.println("Unknown server request type");
             }
-
-        } while (!requestType.equals("END"));
+        }
         selector.close();
-
     }
 
     /*
@@ -366,25 +353,26 @@ public class Connection {
 
     public static void main(String[] args) {
 
-        // Check if there are enough arguments
+        // Check if the number of arguments is correct
         if (args.length < 1) {
             Connection.printUsage();
             return;
         }
         Connection connection = null;
 
-        // Parse port and host arguments and create a Connection object
         try {
-
+            // Parse the arguments
             int port = Integer.parseInt(args[0]);
             String host = args.length == 2 ? args[1] : Connection.DEFAULT_HOST;
+
+            // Create a start new connection
             connection = new Connection(port, host);
             connection.start();
             connection.initMenu();
 
-            // Start the connection and authenticate
-            if (connection.authenticate())
-                connection.listening();
+            // Authenticate
+            if (connection.handleAuthentication())
+                connection.handleServerMessages();
             else
                 connection.stop();
 

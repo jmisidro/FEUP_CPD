@@ -34,7 +34,9 @@ class Database {
         this.database = (JSONObject) new JSONParser().parse(content.toString());
     }
 
-    // Creates an empty file with an empty JSON object, if the file doesn't already exist
+    /*
+    * If the database file does not exist, create an empty file with an empty database object
+    */
     private void createEmptyFile() throws IOException {
         JSONObject emptyObject = new JSONObject();
         emptyObject.put("database", new JSONArray());
@@ -43,14 +45,23 @@ class Database {
         writer.close();
     }
 
-    // Updates the database file with the current database object
+    /*
+     * Backup the database to the file
+     */
     public void backup() throws IOException {
         FileWriter writer = new FileWriter(this.file);
         writer.write(this.database.toJSONString());
         writer.close();
     }
 
-    // Authenticate a user with their username and password in the Database
+    /*
+     * Login a user to the Database
+     * @param username: the username of the user
+     * @param password: the password of the user
+     * @param token: the token of the user
+     * @param socket: the socket of the user
+     * @return a Player object if the login is successful, null otherwise
+     */
     public Player login(String username, String password, String token, SocketChannel socket) {
         // Get the users from the database
         JSONArray savedUsers = (JSONArray) this.database.get("database");
@@ -70,7 +81,14 @@ class Database {
         return null;
     }
 
-    // Register a new user to the Database
+    /*
+     * Register a new user to the Database
+     * @param username: the username of the user
+     * @param password: the password of the user
+     * @param token: the token of the user
+     * @param socket: the socket of the user
+     * @return a Player object if the registration is successful, null otherwise
+     */
     public Player register(String username, String password, String token, SocketChannel socket) {
         // Get the users from the database
         JSONArray savedUsers = (JSONArray) this.database.get("database");
@@ -100,7 +118,12 @@ class Database {
         return new Player(username, passwordHash, token, 0L, socket);
     }
 
-    // Restore a user's session based on their token
+    /*
+     * Restore a user from the Database using a token
+     * @param token: the token of the user
+     * @param socket: the socket of the user
+     * @return a Player object if the restoration is successful, null otherwise
+     */
     public Player restore(String token, SocketChannel socket) {
         // Get the users from the database
         JSONArray savedUsers = (JSONArray) this.database.get("database");
@@ -120,7 +143,12 @@ class Database {
         return null;
     }
 
-    // Update the user's rank in the Database
+    /*
+     * Update the rank of a user in the Database
+     * @param player: the player whose rank needs to be updated
+     * @param value: the value by which the rank needs to be updated
+     * @return a Player object if the update is successful, null otherwise
+     */
     public void updateRank(Player player, int value) {
         // Get the users from the database
         JSONArray savedUsers = (JSONArray) this.database.get("database");
@@ -137,7 +165,10 @@ class Database {
         }
     }
 
-    // Invalidates the token for the given user
+    /*
+     * Invalidate the token of a user in the Database
+     * @param player: the player whose token needs to be invalidated
+     */
     public void invalidateToken(Player player) {
         // Get the users from the database
         JSONArray savedUsers = (JSONArray) this.database.get("database");
@@ -153,7 +184,9 @@ class Database {
         }
     }
 
-    // Resets all tokens in the database
+    /*
+     * Reset the tokens of all users in the Database
+     */
     public void resetTokens() {
         // Get the users from the database
         JSONArray savedUsers = (JSONArray) this.database.get("database");
@@ -163,7 +196,11 @@ class Database {
         }
     }
 
-    // Returns the leaderboard
+    /*
+     * Get the leaderboard from the Database
+     * @param n: the number of users to be displayed in the leaderboard
+     * @return an array of strings containing the usernames and ranks of the top n users
+     */
     public String[] getLeaderboard(int n) {
         String[] leaderboard = new String[n];
         // Get the users from the database

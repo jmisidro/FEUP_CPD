@@ -9,38 +9,53 @@ import java.util.*;
 
 public class Connection {
 
+    // Connection
     private final int port;                                 // The port number
     private final String host;                              // The host name or IP address
     private SocketChannel socket;                           // A SocketChannel for the connection
-    private final String TOKEN_PATH = "assign2/src/client/";     // A path to a directory containing tokens
-    private static final String DEFAULT_HOST = "localhost"; // A default host to use if none is provided
-    private final long TIMEOUT = 30000;                     // Timeout to avoid slow clients in milliseconds
+
+    // Player
     private PlayerMenu playerMenu;                            // A GUI to display messages
     private int authenticationOption = 0;
 
-    // Constructor
+    // Constants
+    private final String TOKEN_PATH = "assign2/src/player/";     // A path to a directory containing tokens
+    private static final String DEFAULT_HOST = "localhost"; // A default host to use if none is provided
+    private final long TIMEOUT = 30000;                     // Timeout to avoid slow clients in milliseconds
+
+
     public Connection(int port, String host) {
         this.port = port;
         this.host = host;
     }
 
-    // Method to start the connection
+    /*
+     * Start the connection
+     */
     public void start() throws IOException {
         this.socket = SocketChannel.open();             // Open a new SocketChannel
         this.socket.connect(new InetSocketAddress(this.host, this.port)); // Connect to the specified host and port
     }
 
-    // Method to stop the connection
+    /*
+     * Stop the connection
+     */
     public void stop() throws IOException {
         this.socket.close(); // Close the SocketChannel
     }
 
-    // Class usage
+    /*
+     * Print the usage for the program
+     */
     private static void printUsage() {
         System.out.println("usage: java Connection <PORT> [HOST]");
     }
 
-    // Static method to send a message through a SocketChannel
+    /*
+     * Send a message to a SocketChannel
+     * @param socket The SocketChannel to send the message to
+     * @param message The message to send
+     */
     public static void send(SocketChannel socket, String message) throws Exception {
         ByteBuffer buffer = ByteBuffer.allocate(1024);      // Create a ByteBuffer with a capacity of 1024 bytes
         buffer.clear();                                     // Clear the buffer
@@ -51,8 +66,12 @@ public class Connection {
         }
     }
 
-    // Static method to receive a message from a SocketChannel
+
     /*
+     * Receive a message from a SocketChannel
+     * @param socket The SocketChannel to receive the message from
+     * @return The message received from the SocketChannel
+     *
      * Receive a message from a SocketChannel
      * @param socket The SocketChannel to receive the message from
      * - OPT: Option request
@@ -68,6 +87,11 @@ public class Connection {
         return new String(buffer.array(), 0, bytesRead); // Convert the bytes in the buffer to a String and return it
     }
 
+    /*
+     * Read a token from a file
+     * @param filename The name of the file to read the token from
+     * @return The token read from the file
+     */
     public String readToken(String filename) {
 
         if (filename == null || filename.isEmpty()) {
@@ -98,6 +122,11 @@ public class Connection {
         return fileContent.toString(); // Return the file content as a String
     }
 
+    /*
+     * Write a token to a file
+     * @param filename The name of the file to write the token to
+     * @param content The content to write to the file
+     */
     public void writeToken(String filename, String content) {
 
         try {
@@ -117,6 +146,10 @@ public class Connection {
         }
     }
 
+    /*
+     * Authenticate the connection
+     * @return True if the connection is authenticated, false otherwise
+     */
     public boolean authenticate() throws Exception {
 
         String[] serverAnswer;
@@ -211,6 +244,9 @@ public class Connection {
         return requestType.equals("AUTH"); // Authentication success?
     }
 
+    /*
+     * Listen for messages from the server
+     */
     public void listening() throws Exception {
 
         String[] serverAnswer;
@@ -269,19 +305,31 @@ public class Connection {
 
     }
 
+    /*
+     * Initialize the player menu
+     */
     public void initMenu() {
         this.playerMenu = new PlayerMenu(15000);
     }
 
+    /*
+     * Display Main menu
+     */
     public String mainMenuMenu() {
         authenticationOption = Integer.parseInt(this.playerMenu.mainMenu());
         return Integer.toString(authenticationOption);
     }
 
+    /*
+     * Display Login and register menu
+     */
     public String[] loginAndRegister(boolean invalidCredentials, boolean takenUsername) {
         return this.playerMenu.loginAndRegister(invalidCredentials, takenUsername);
     }
 
+    /*
+     * Get a token from the menu
+     */
     public String getTokenFromMenu(boolean invalidToken) {
         String[] result = this.playerMenu.restore(invalidToken);
 
@@ -291,10 +339,16 @@ public class Connection {
             return readToken(result[0]);
     }
 
+    /*
+     * Display Queue menu
+     */
     public void queueMenu(String serverMessage) {
         this.playerMenu.queue(serverMessage);
     }
 
+    /*
+     * Display Game menu
+     */
     public void gameMenu(String[] serverMessages, String requestType) {
         switch (requestType) {
             case "INFO" -> this.playerMenu.info(serverMessages);
@@ -303,6 +357,9 @@ public class Connection {
         }
     }
 
+    /*
+     * Close the player menu
+     */
     public void closeMenu() {
         if (this.playerMenu != null) this.playerMenu.close();
     }

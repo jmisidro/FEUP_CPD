@@ -8,12 +8,19 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Utils {
+
+    private static final String FILE_PATH = "assign2/src/server/";
+
+    /*
+     * Parse the questions from the questions.json file inside FILE_PATH
+     * @return: a list of questions
+     */
     public static List<Question> parseQuestions() {
         List<Question> questions = new ArrayList<>();
 
         try {
             JSONParser parser = new JSONParser();
-            JSONObject rootObject = (JSONObject) parser.parse(new FileReader("assign2/src/server/questions.json"));
+            JSONObject rootObject = (JSONObject) parser.parse(new FileReader(FILE_PATH + "questions.json"));
             JSONArray questionArray = (JSONArray) rootObject.get("questions");
 
             for (Object questionObj : questionArray) {
@@ -38,6 +45,11 @@ public class Utils {
         return questions;
     }
 
+    /*
+     * Get n random questions from the list of questions
+     * @param n: the number of questions to get
+     * @return: a list of n random questions
+     */
     public static List<Question> getRandomQuestions(int n) {
         List<Question> questions = parseQuestions();
         List<Question> randomQuestions = new ArrayList<>();

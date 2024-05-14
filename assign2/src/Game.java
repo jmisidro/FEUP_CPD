@@ -40,7 +40,7 @@ public class Game implements Runnable {
      * The game is made of at least 2 players.
      * The game is played in 4 rounds.
      * The winner is the player with the highest score.
-     * If there's a tie, the players will divide between themselves the gained elo.
+     * If there's a tie, the players will divide between themselves the gained rank.
      */
     public void run() {
         try {

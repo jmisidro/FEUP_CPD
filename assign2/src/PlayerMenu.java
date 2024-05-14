@@ -31,7 +31,6 @@ public class PlayerMenu {
 
     // Colors for the GUI
     private Color bg_color = new Color(10, 4, 41);
-    private Color card_color = new Color(28, 21, 61);
 
     public PlayerMenu(int timeoutTime) {
 
@@ -43,7 +42,7 @@ public class PlayerMenu {
         f.setLayout(null);
         f.setVisible(true);
 
-        title.setBounds(200, 25, 200, 50);
+        title.setBounds(200, 25, 300, 50);
         title.setFont(new Font("Arial", Font.BOLD, 42));
         title.setForeground(Color.WHITE);
         roundLabel.setForeground(Color.WHITE);

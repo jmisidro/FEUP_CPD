@@ -20,7 +20,7 @@ public class ServerMenu {
         timeLabel.setText("Time: " + currentTime + "s");
     });
 
-    public ServerMenu() {
+    public ServerMenu(int ranked) {
 
         f = new JFrame("Pop Quiz Server");
         f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -31,10 +31,17 @@ public class ServerMenu {
 
         // Game Title
         JLabel title = new JLabel("Pop Quiz");
-        title.setBounds(200, 50, 200, 50);
+        title.setBounds(200, 50, 300, 50);
         title.setFont(new Font("Arial", Font.BOLD, 42));
         title.setForeground(Color.WHITE);
         f.add(title);
+
+        // Game Mode
+        JLabel gameMode = new JLabel("Game Mode: " + (ranked == 1 ? "Ranked" : "Simple"));
+        gameMode.setBounds(200, 90, 300, 50);
+        gameMode.setFont(new Font("Arial", Font.BOLD, 20));
+        gameMode.setForeground(Color.CYAN);
+        f.add(gameMode);
 
         // Information Panel
         JPanel infoPanel = new JPanel();

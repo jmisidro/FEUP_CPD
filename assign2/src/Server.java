@@ -68,7 +68,7 @@ public class Server {
         this.timeLock = new ReentrantLock();
 
         // Server Menu
-        this.serverMenu = new ServerMenu();
+        this.serverMenu = new ServerMenu(ranked);
         this.lastPing = System.currentTimeMillis();
     }
 
@@ -200,7 +200,7 @@ public class Server {
      */
     private void pingPlayers() {
         // Time between pings to players (milliseconds)
-        int PING_INTERVAL = 10000;
+        int PING_INTERVAL = 15000;
         if(System.currentTimeMillis() - lastPing > PING_INTERVAL) {
             lastPing = System.currentTimeMillis();
 

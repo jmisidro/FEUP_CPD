@@ -139,7 +139,6 @@ class Database {
                 return new Player(username, password, token, rank, socket);
             }
         }
-        // If no matching token is found, return null
         return null;
     }
 

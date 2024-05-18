@@ -147,7 +147,6 @@ public class Server {
         if (waitingQueue.size() >= PLAYERS_PER_GAME) {
             sortPlayers(); // Sort the players by rank
             int slack = calculateSlack(); // Calculate the slack
-            System.out.printf("Slack: %d\n", slack);
             for (int i = 0; i <= waitingQueue.size() - PLAYERS_PER_GAME; i++) {
                 // calculate absolute difference between the first and last player in the game
                 int rankDifference = (int) Math.abs(waitingQueue.get(i).getRank() - waitingQueue.get(i + PLAYERS_PER_GAME - 1).getRank());

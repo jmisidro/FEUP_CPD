@@ -102,19 +102,19 @@ public class Connection {
 
         // Check if the file exists
         if (!file.exists()) {
-            System.out.println("File - "+ filename  + " - does not exist");
+            System.out.println("File: "+ filename  + " does not exist");
             return null;
         }
 
-        // Retrieve file content
-        StringBuilder fileContent = new StringBuilder(); // Create StringBuilder to hold file content
+        // Read the file content
+        StringBuilder fileContent = new StringBuilder();
         try {
-            BufferedReader reader = new BufferedReader(new FileReader(file)); // Create BufferedReader to read file
+            BufferedReader reader = new BufferedReader(new FileReader(file));
             String line;
-            while ((line = reader.readLine()) != null) {  // Read each line of the file
+            while ((line = reader.readLine()) != null) {
                 fileContent.append(line);
             }
-            reader.close(); // Close the BufferedReader
+            reader.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -130,16 +130,16 @@ public class Connection {
     public void writeToken(String filename, String content) {
 
         try {
-            // Check if the file exists
+            // Create the file if it doesn't exist
             File file = new File(this.TOKEN_PATH + filename);
             if (!file.exists()) {
                 file.createNewFile();
             }
 
-            // Update file content
-            BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(file.getAbsoluteFile()));
-            bufferedWriter.write(content); // Write the content to the file
-            bufferedWriter.close(); // Close the BufferedWriter
+            // Write the content to the file
+            BufferedWriter writer = new BufferedWriter(new FileWriter(file.getAbsoluteFile()));
+            writer.write(content);
+            writer.close();
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -163,9 +163,9 @@ public class Connection {
             requestType = serverAnswer[0].toUpperCase();
 
             switch (requestType) {
-                case "OPT" -> // Option request
+                case "OPT" -> // Menu option request
                         Connection.send(socket, mainMenuMenu());
-                case "USR" -> { // Data request: username or password
+                case "USR" -> { // Data request: username or password (or BACK)
                     String[] credentials;
 
                     do {
@@ -223,13 +223,13 @@ public class Connection {
                         Connection.send(socket,Integer.toString(authenticationOption));
                     }
                 }
-                case "AUTH" -> { // Authentication success. Receive session token value
-                    System.out.println("Success. Session token was received.");
+                case "AUTH" -> { // Authentication success. Session token received
+                    System.out.println("Success! Session token was received.");
                     Connection.send(socket, "ACK");
                     this.writeToken(serverAnswer[1], serverAnswer[2]);
                 }
-                case "END" -> System.out.println(serverAnswer[1]); // If the server brokes the connection
-                default -> System.out.println("Unknown server request type :" + requestType);
+                case "END" -> System.out.println(serverAnswer[1]); // End of the connection
+                default -> System.out.println("Unknown server request type:" + requestType);
             }
         } while (!requestType.equals("AUTH") && !requestType.equals("END"));
         return requestType.equals("AUTH"); // Return true if the connection is authenticated
@@ -264,26 +264,26 @@ public class Connection {
             String requestType = serverAnswer[0].toUpperCase();
 
             switch (requestType) {
-                case "QUEUE":
+                case "QUEUE": // Display the queue menu
                     Connection.send(socket, "ACK");
                     queueMenu(serverAnswer[1]);
                     break;
-                case "END":
+                case "END": // Close the connection
                     Connection.send(socket, "ACK");
                     return;
-                case "INFO":
-                case "QUESTION":
-                case "SCORE":
+                case "INFO": // Display the game information
+                case "QUESTION": // Update the question
+                case "SCORE": // Update the score
                     gameMenu(serverAnswer, requestType);
                     Connection.send(socket, "ACK");
                     break;
-                case "TURN":
+                case "TURN": // Send the player's turn
                     Connection.send(socket, this.playerMenu.turn());
                     break;
-                case "GAMEOVER":
+                case "GAMEOVER": // Display the game over message
                     Connection.send(socket, this.playerMenu.gameOver(serverAnswer[1]));
                     break;
-                case "PING":
+                case "PING": // Doesn't expect an answer back
                     break;
                 default:
                     System.out.println("Unknown server request type");

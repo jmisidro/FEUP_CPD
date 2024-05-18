@@ -288,7 +288,7 @@ public class PlayerMenu {
             latch.countDown();
         });
 
-        timer.setRepeats(false); // Make sure the timer only fires once
+        timer.setRepeats(false);
 
         // Start the timer
         timer.start();
@@ -431,7 +431,7 @@ public class PlayerMenu {
             latch.countDown();
         });
 
-        timer.setRepeats(false); // Make sure the timer only fires once
+        timer.setRepeats(false);
 
         // Start the timer
         timer.start();

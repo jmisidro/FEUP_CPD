@@ -103,3 +103,5 @@ The server supports two game modes: **simple** and **ranked**.
 - José Miguel Isidro - up202006485 - 38%
 - Fábio Rocha - up202005478 - 38%
 - José Guedes - up202007651 - 24%
+
+**Final Grade**: 19.1
